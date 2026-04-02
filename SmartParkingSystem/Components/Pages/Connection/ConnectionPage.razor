@@ -1,0 +1,57 @@
+@page "/"
+@using SmartParkingSystem.Components.Pages.Connection.Parts
+@inherits ConnectionPageBase
+@namespace SmartParkingSystem.Components.Pages.Connection
+
+<section class="box-border min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+    <div class="mx-auto flex h-full min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center">
+        <div class="grid w-full gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-stretch">
+            <ConnectionHero PanelClass="@LeftPanelClass"
+                            Title="@Texts.HeroTitle"
+                            Description="@Texts.HeroDescription"/>
+
+            <div class="@RightPanelClass">
+                <ConnectionLanguageSwitch EnglishButtonClass="@GetLanguageButtonClass(AppLanguage.English)"
+                                          UkrainianButtonClass="@GetLanguageButtonClass(AppLanguage.Ukrainian)"
+                                          OnLanguageSelected="SetLanguage"/>
+
+                <div class="flex flex-1 flex-col rounded-md bg-white/80 p-6 sm:p-8 lg:p-10">
+                    <ConnectionModeTabs AutomaticButtonClass="@GetModeButtonClass(ConnectionMode.Automatic)"
+                                        AdvancedButtonClass="@GetModeButtonClass(ConnectionMode.Advanced)"
+                                        AutomaticLabel="@Texts.AutomaticLabel"
+                                        AdvancedLabel="@Texts.AdvancedLabel"
+                                        OnAutomaticSelected="() => SetMode(ConnectionMode.Automatic)"
+                                        OnAdvancedSelected="() => SetMode(ConnectionMode.Advanced)"/>
+
+                    <div class="mt-8 flex-1 rounded-md bg-calm-50 p-5 transition-all duration-500 sm:p-6">
+                        @if (State.SelectedMode == ConnectionMode.Automatic)
+                        {
+                            <AutomaticConnectionPanel ContentClass="@GetModeContentClass()"
+                                                      PrimaryButtonClass="@PrimaryButtonClass"
+                                                      ButtonText="@Texts.AutomaticButton"
+                                                      Description="@State.AutomaticDescription"
+                                                      IsBusy="@State.IsBusy"
+                                                      OnConnect="TryAutoConnectAsync"/>
+                        }
+                        else
+                        {
+                            <AdvancedConnectionPanel ContentClass="@GetModeContentClass()"
+                                                     DeviceLabel="@Texts.DeviceOrPortLabel"
+                                                     RefreshButtonText="@Texts.RefreshButton"
+                                                     ConnectButtonText="@Texts.ManualConnectButton"
+                                                     WarningButtonClass="@WarningButtonClass"
+                                                     SecondaryButtonClass="@SecondaryButtonClass"
+                                                     Description="@State.AdvancedDescription"
+                                                     IsBusy="@State.IsBusy"
+                                                     SelectedTargetId="@State.SelectedTargetId"
+                                                     SelectedTargetIdChanged="OnSelectedTargetChanged"
+                                                     Targets="@State.Targets"
+                                                     OnRefresh="RefreshTargetsAsync"
+                                                     OnConnect="TryManualConnectAsync"/>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

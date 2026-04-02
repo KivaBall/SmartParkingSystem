@@ -1,24 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>SmartParkingSystem</title>
-    <base href="/" />
-    <link rel="stylesheet" href="app.css" />
-    <link rel="stylesheet" href="SmartParkingSystem.styles.css" />
-    <link rel="icon" href="data:,">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+          name="viewport"/>
+    <title>Smart Parking System</title>
+    <base href="/"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
+    <link href="SmartParkingSystem.styles.css" rel="stylesheet"/>
+    <link href="data:," rel="icon">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ["Manrope", "sans-serif"]
+                    },
+                    keyframes: {
+                        "enter-left": {
+                            "0%": {opacity: "0", transform: "translateX(-24px)"},
+                            "100%": {opacity: "1", transform: "translateX(0)"}
+                        },
+                        "enter-right": {
+                            "0%": {opacity: "0", transform: "translateX(24px)"},
+                            "100%": {opacity: "1", transform: "translateX(0)"}
+                        },
+                        "exit-left": {
+                            "0%": {opacity: "1", transform: "translateX(0)"},
+                            "100%": {opacity: "0", transform: "translateX(-40px)"}
+                        },
+                        "exit-right": {
+                            "0%": {opacity: "1", transform: "translateX(0)"},
+                            "100%": {opacity: "0", transform: "translateX(40px)"}
+                        }
+                    },
+                    animation: {
+                        "enter-left": "enter-left 1s ease-out forwards",
+                        "enter-right": "enter-right 0.88s ease-out forwards 0.12s",
+                        "exit-left": "exit-left 0.5s ease-in forwards",
+                        "exit-right": "exit-right 0.5s ease-in forwards"
+                    },
+                    colors: {
+                        calm: {
+                            50: "#f5fbff",
+                            100: "#ebf8ff",
+                            500: "#5d99a7",
+                            700: "#2f6270",
+                            900: "#11414d"
+                        },
+                        mint: {
+                            100: "#eef9f6",
+                            200: "#e6f6ef",
+                            300: "#d4efe4",
+                            700: "#2f6a53"
+                        },
+                        warm: {
+                            100: "#fff5e9",
+                            200: "#fff1dc",
+                            300: "#ffe6c3",
+                            700: "#9a6530"
+                        },
+                        brand: {
+                            100: "#dff3ff",
+                            200: "#bfe9ff",
+                            300: "#8fdaff",
+                            400: "#5ec8ff"
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
-<body>
-    <div id="app">Loading...</div>
+<body class="min-h-screen bg-gradient-to-b from-calm-50 to-mint-100 font-sans text-calm-900 antialiased">
+<div class="min-h-screen" id="app"></div>
 
-    <div id="blazor-error-ui" data-nosnippet>
-        An unhandled error has occurred.
-        <a href="." class="reload">Reload</a>
-        <span class="dismiss">x</span>
-    </div>
-
-    <script src="_framework/blazor.webview.js" autostart="false"></script>
+<script>
+    window.initializeLucideIcons = () => {
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    };
+</script>
+<script autostart="false" src="_framework/blazor.webview.js"></script>
 </body>
 </html>

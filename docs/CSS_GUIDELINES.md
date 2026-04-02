@@ -36,6 +36,9 @@ The Smart Parking System interface should look modern, calm, minimalistic, and u
 - Safety, warnings, or attention states may use soft orange or warm yellow accents.
 - Even highlighted states should remain restrained and non-aggressive.
 - The interface should feel light, calm, and readable rather than alarm-heavy.
+- Primary visual accents should still feel alive rather than faded.
+- Bright sky-blue should be treated as the main positive brand accent for headings, highlighted controls, and other important UI emphasis.
+- Supporting containers and secondary actions should use clearer blue, mint, and warm tones instead of dull grayish surfaces.
 
 ## Typography
 
@@ -56,3 +59,17 @@ The Smart Parking System interface should look modern, calm, minimalistic, and u
 - The design should feel structured, soft, and modern.
 - It should not look visually overloaded.
 - The system should prioritize clarity of state, operator comfort, and clean business-oriented navigation.
+
+## Motion
+
+- Animations should be used carefully and only where they improve clarity.
+- The default animation duration across the interface should be `0.5s`.
+- `0.5s` should be treated as the total perceived duration of one animation action.
+- If a transition is split into multiple sequential phases, their combined duration should still equal `0.5s`.
+- Example: if one UI state fades out and the next fades in, that should typically be `0.25s` for fade-out and `0.25s` for fade-in.
+- Page loading and page-to-page transitions should use `1s` total duration.
+- For page-to-page navigation, the total `1s` should usually be split as `0.5s` for the current page exit and `0.5s` for the next page entrance.
+- For first application load, a single full-page entrance animation may use the full `1s`.
+- For page transitions, entrance and exit motion may be longer than local UI interactions as long as they stay controlled and readable.
+- Entrance animations should feel soft and controlled rather than flashy.
+- State changes such as switching between connection modes should transition smoothly instead of changing abruptly.
