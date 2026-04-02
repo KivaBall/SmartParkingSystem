@@ -1,6 +1,6 @@
-﻿namespace SmartParkingSystem;
+namespace SmartParkingSystem;
 
-public partial class App : Application
+public partial class App
 {
     public App()
     {
@@ -9,6 +9,6 @@ public partial class App : Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        return new Window(new MainPage()) { Title = "SmartParkingSystem" };
+        return new Window(new MainPage()) { Title = "Smart Parking System" };
     }
 }

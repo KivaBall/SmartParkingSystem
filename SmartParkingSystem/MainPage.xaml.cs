@@ -1,6 +1,6 @@
-﻿namespace SmartParkingSystem;
+namespace SmartParkingSystem;
 
-public partial class MainPage : ContentPage
+public partial class MainPage
 {
     public MainPage()
     {

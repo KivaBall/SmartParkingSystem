@@ -1,0 +1,22 @@
+@namespace SmartParkingSystem.Components.Pages.Connection.Parts
+@inherits ConnectionModeTabsBase
+
+<div class="flex flex-col gap-3 sm:flex-row">
+    <button class="@AutomaticButtonClass" @onclick="OnAutomaticSelected">
+        <span class="flex h-10 w-10 items-center justify-center rounded-md bg-white/80 text-calm-700">
+            <i data-lucide="bluetooth-searching"></i>
+        </span>
+        <span>
+            <span class="text-sm font-semibold text-calm-900">@AutomaticLabel</span>
+        </span>
+    </button>
+
+    <button class="@AdvancedButtonClass" @onclick="OnAdvancedSelected">
+        <span class="flex h-10 w-10 items-center justify-center rounded-md bg-white/80 text-calm-700">
+            <i data-lucide="sliders-horizontal"></i>
+        </span>
+        <span>
+            <span class="text-sm font-semibold text-calm-900">@AdvancedLabel</span>
+        </span>
+    </button>
+</div>
