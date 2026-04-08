@@ -8,7 +8,7 @@
     <base href="/"/>
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Orbitron:wght@500;700;800&display=swap"
           rel="stylesheet">
     <link href="SmartParkingSystem.styles.css" rel="stylesheet"/>
     <link href="data:," rel="icon">
@@ -29,6 +29,10 @@
                             "0%": {opacity: "0", transform: "translateX(24px)"},
                             "100%": {opacity: "1", transform: "translateX(0)"}
                         },
+                        "enter-bottom": {
+                            "0%": {opacity: "0", transform: "translateY(24px)"},
+                            "100%": {opacity: "1", transform: "translateY(0)"}
+                        },
                         "exit-left": {
                             "0%": {opacity: "1", transform: "translateX(0)"},
                             "100%": {opacity: "0", transform: "translateX(-40px)"}
@@ -36,13 +40,22 @@
                         "exit-right": {
                             "0%": {opacity: "1", transform: "translateX(0)"},
                             "100%": {opacity: "0", transform: "translateX(40px)"}
+                        },
+                        "exit-bottom": {
+                            "0%": {opacity: "1", transform: "translateY(0)"},
+                            "100%": {opacity: "0", transform: "translateY(32px)"}
                         }
                     },
                     animation: {
                         "enter-left": "enter-left 1s ease-out forwards",
                         "enter-right": "enter-right 0.88s ease-out forwards 0.12s",
+                        "enter-bottom": "enter-bottom 0.5s ease-out forwards",
+                        "page-enter-left": "enter-left 0.5s ease-out forwards",
+                        "page-enter-right": "enter-right 0.5s ease-out forwards",
+                        "page-enter-bottom": "enter-bottom 0.5s ease-out forwards",
                         "exit-left": "exit-left 0.5s ease-in forwards",
-                        "exit-right": "exit-right 0.5s ease-in forwards"
+                        "exit-right": "exit-right 0.5s ease-in forwards",
+                        "exit-bottom": "exit-bottom 0.5s ease-in forwards"
                     },
                     colors: {
                         calm: {
@@ -76,6 +89,26 @@
         };
     </script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        html, body, #app {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar,
+        #app::-webkit-scrollbar,
+        *::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            display: none;
+        }
+
+        * {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+    </style>
 </head>
 
 <body class="min-h-screen bg-gradient-to-b from-calm-50 to-mint-100 font-sans text-calm-900 antialiased">
@@ -87,6 +120,8 @@
             window.lucide.createIcons();
         }
     };
+
+    window.getViewportLabel = () => `${window.innerWidth} x ${window.innerHeight}`;
 </script>
 <script autostart="false" src="_framework/blazor.webview.js"></script>
 </body>

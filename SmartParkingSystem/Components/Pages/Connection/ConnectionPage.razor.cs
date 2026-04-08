@@ -2,12 +2,12 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using SmartParkingSystem.Models.DeviceConnection;
 using SmartParkingSystem.Models.Localization;
-using SmartParkingSystem.Services.DeviceConnection;
+using SmartParkingSystem.Services.DeviceConnection.Connection;
 using SmartParkingSystem.Services.Localization;
 
 namespace SmartParkingSystem.Components.Pages.Connection;
 
-public class ConnectionPageBase : ComponentBase
+public class ConnectionPageBase : ComponentBase, IDisposable
 {
     [Inject]
     protected IDeviceConnectionService? ConnectionService { get; set; }
@@ -22,7 +22,7 @@ public class ConnectionPageBase : ComponentBase
     protected IJSRuntime? JsRuntime { get; set; }
 
     protected ConnectionPageState State { get; } = new ConnectionPageState();
-    protected ConnectionTexts Texts => RequireLocalizationService().GetConnectionTexts(State.SelectedLanguage);
+    protected ConnectionTexts Texts => RequireLocalizationService().GetConnectionTexts();
 
     private ConnectionPageCoordinator Coordinator =>
         field ??= new ConnectionPageCoordinator(RequireConnectionService());
@@ -34,8 +34,16 @@ public class ConnectionPageBase : ComponentBase
     protected string LeftPanelClass => ConnectionPageStyles.GetLeftPanelClass(State.IsLeavingPage);
     protected string RightPanelClass => ConnectionPageStyles.GetRightPanelClass(State.IsLeavingPage);
 
+    public void Dispose()
+    {
+        RequireLocalizationService().LanguageChanged -= OnLanguageChanged;
+        GC.SuppressFinalize(this);
+    }
+
     protected override async Task OnInitializedAsync()
     {
+        RequireLocalizationService().LanguageChanged += OnLanguageChanged;
+        State.SelectedLanguage = RequireLocalizationService().CurrentLanguage;
         await Coordinator.InitializeAsync(State, Texts);
     }
 
@@ -54,10 +62,11 @@ public class ConnectionPageBase : ComponentBase
 
     protected void SetLanguage(AppLanguage language)
     {
+        RequireLocalizationService().CurrentLanguage = language;
         ConnectionPageCoordinator.SetLanguage(
             State,
             language,
-            RequireLocalizationService().GetConnectionTexts(language));
+            RequireLocalizationService().GetConnectionTexts());
     }
 
     protected string GetModeButtonClass(ConnectionMode mode)
@@ -77,19 +86,46 @@ public class ConnectionPageBase : ComponentBase
 
     protected async Task TryAutoConnectAsync()
     {
-        var result = await Coordinator.TryAutoConnectAsync(State, Texts);
+        ConnectionPageCoordinator.SetAutoConnectBusy(State, Texts);
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        var result = await RequireConnectionService().TryAutoConnectAsync();
         await HandleConnectionResultAsync(result, ConnectionMode.Automatic);
     }
 
     protected async Task TryManualConnectAsync()
     {
-        var result = await Coordinator.TryManualConnectAsync(State, Texts);
+        ConnectionPageCoordinator.SetManualConnectBusy(State, Texts);
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        var result = await RequireConnectionService().TryConnectAsync(State.SelectedTargetId);
         await HandleConnectionResultAsync(result, ConnectionMode.Advanced);
     }
 
     protected async Task RefreshTargetsAsync()
     {
-        await Coordinator.RefreshTargetsAsync(State, Texts);
+        ConnectionPageCoordinator.SetRefreshBusy(State, Texts);
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        try
+        {
+            State.Targets = await RequireConnectionService().RefreshTargetsAsync();
+            State.SelectedTargetId = State.Targets.Count > 0 ? State.Targets[0].Id : null;
+            State.AdvancedDescription = Texts.AdvancedIdleDescription;
+        }
+        catch
+        {
+            State.AdvancedDescription = Texts.AdvancedFailedDescription;
+            throw;
+        }
+        finally
+        {
+            State.IsBusy = false;
+        }
+
         await RequireJsRuntime().InvokeVoidAsync("initializeLucideIcons");
     }
 
@@ -110,7 +146,7 @@ public class ConnectionPageBase : ComponentBase
         await InvokeAsync(StateHasChanged);
         await Task.Delay(ConnectionPageTimings.PageExitMilliseconds);
         State.IsBusy = false;
-        RequireNavigationManager().NavigateTo("/dashboard");
+        RequireNavigationManager().NavigateTo("/workspace");
     }
 
     private IDeviceConnectionService RequireConnectionService()
@@ -131,5 +167,17 @@ public class ConnectionPageBase : ComponentBase
     private IJSRuntime RequireJsRuntime()
     {
         return JsRuntime ?? throw new InvalidOperationException("JavaScript runtime is not available.");
+    }
+
+    private void OnLanguageChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            ConnectionPageCoordinator.SetLanguage(
+                State,
+                RequireLocalizationService().CurrentLanguage,
+                RequireLocalizationService().GetConnectionTexts());
+            StateHasChanged();
+        });
     }
 }
