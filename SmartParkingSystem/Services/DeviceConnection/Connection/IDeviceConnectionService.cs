@@ -1,6 +1,6 @@
 using SmartParkingSystem.Models.DeviceConnection;
 
-namespace SmartParkingSystem.Services.DeviceConnection;
+namespace SmartParkingSystem.Services.DeviceConnection.Connection;
 
 public interface IDeviceConnectionService
 {
