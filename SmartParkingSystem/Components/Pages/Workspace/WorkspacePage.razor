@@ -1,0 +1,46 @@
+﻿@page "/workspace"
+@using SmartParkingSystem.Components.Pages.Workspace.Parts
+@using SmartParkingSystem.Components.Shared.AppHeaderNav
+@inherits WorkspacePageBase
+@namespace SmartParkingSystem.Components.Pages.Workspace
+
+<section class="box-border min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+    <div class="mx-auto w-full max-w-6xl space-y-4">
+        <div style="position: sticky; top: 1.5rem; z-index: 30;">
+            <AppHeaderNav Items="@NavigationItems"
+                          ContainerClass="@HeaderClass"
+                          OnNavigateRequested="HandleNavigationAsync"/>
+        </div>
+
+        <div @key="State.DisplayedSection" class="@ContentClass">
+            @switch (State.DisplayedSection)
+            {
+                case WorkspaceSection.Dashboard:
+                    <WorkspaceDashboardView IsExiting="@(!State.IsContentVisible)"
+                                            OnSectionRequested="HandleNavigationAsync"/>
+                    break;
+                case WorkspaceSection.Parking:
+                    <WorkspaceParkingView IsExiting="@(!State.IsContentVisible)"/>
+                    break;
+                case WorkspaceSection.Gate:
+                    <WorkspaceGateView IsExiting="@(!State.IsContentVisible)"/>
+                    break;
+                case WorkspaceSection.Monitor:
+                    <WorkspaceMonitorView IsExiting="@(!State.IsContentVisible)"/>
+                    break;
+                case WorkspaceSection.Events:
+                    <WorkspaceEventsView IsExiting="@(!State.IsContentVisible)"/>
+                    break;
+                case WorkspaceSection.Admin:
+                    <WorkspaceAdminView IsExiting="@(!State.IsContentVisible)"/>
+                    break;
+                case WorkspaceSection.Settings:
+                    <WorkspaceSettingsView OnExitRequested="HandleExitAsync"
+                                           OnCloseRequested="CloseApplicationAsync"
+                                           OnLanguageChanged="HandleLanguageChangedAsync"
+                                           IsExiting="@(!State.IsContentVisible)"/>
+                    break;
+            }
+        </div>
+    </div>
+</section>

@@ -1,0 +1,44 @@
+﻿@namespace SmartParkingSystem.Components.Shared.AppHeaderNav
+@inherits AppHeaderNavBase
+
+<header class="@ContainerClass">
+    <nav class="grid grid-cols-4 gap-3 pb-1 md:flex md:flex-nowrap md:items-center" aria-label="Primary">
+        @foreach (var item in Items)
+        {
+            @if (OnNavigateRequested.HasDelegate)
+            {
+                <button class="@GetItemClass(item)"
+                        @onclick='() => HandleNavigateAsync(item)'
+                        aria-label="@item.Label">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-md bg-white/80 text-calm-700">
+                        <i data-lucide="@item.Icon"></i>
+                    </span>
+
+                    @if (!IsExitItem(item))
+                    {
+                        <span class="hidden text-sm font-semibold text-calm-900 md:inline">
+                            @item.Label
+                        </span>
+                    }
+                </button>
+            }
+            else
+            {
+                <a href="@item.Target"
+                   class="@GetItemClass(item)"
+                   aria-label="@item.Label">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-md bg-white/80 text-calm-700">
+                        <i data-lucide="@item.Icon"></i>
+                    </span>
+
+                    @if (!IsExitItem(item))
+                    {
+                        <span class="hidden text-sm font-semibold text-calm-900 md:inline">
+                            @item.Label
+                        </span>
+                    }
+                </a>
+            }
+        }
+    </nav>
+</header>
