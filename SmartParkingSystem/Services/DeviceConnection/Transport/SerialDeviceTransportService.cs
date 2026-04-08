@@ -8,7 +8,6 @@ public sealed class SerialDeviceTransportService : IDeviceTransportService
     private static readonly TimeSpan OpenWarmupDelay = TimeSpan.FromMilliseconds(1500);
     private System.IO.Ports.SerialPort? serialPort;
 #endif
-
     public bool IsOpen
     {
         get
@@ -31,7 +30,6 @@ public sealed class SerialDeviceTransportService : IDeviceTransportService
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .Select(name => new ConnectionTarget(name, name))
             .ToArray();
-
         return Task.FromResult<IReadOnlyList<ConnectionTarget>>(targets);
 #else
         return Task.FromResult<IReadOnlyList<ConnectionTarget>>([]);
@@ -97,7 +95,6 @@ public sealed class SerialDeviceTransportService : IDeviceTransportService
             }
         }
 #endif
-
         ActiveTargetId = null;
         return Task.CompletedTask;
     }
@@ -112,7 +109,7 @@ public sealed class SerialDeviceTransportService : IDeviceTransportService
 
         return Task.Run(() =>
         {
-            serialPort.Write($"{line}\n");
+            serialPort.Write($"{DeviceTransportFraming.WrapPayload(line)}\n");
         }, cancellationToken);
 #else
         throw new PlatformNotSupportedException("Serial transport is not implemented on this platform.");
@@ -132,7 +129,7 @@ public sealed class SerialDeviceTransportService : IDeviceTransportService
             try
             {
                 serialPort.ReadTimeout = (int)Math.Max(timeout.TotalMilliseconds, 1);
-                return serialPort.ReadLine()?.Trim();
+                return DeviceTransportFraming.UnwrapPayload(serialPort.ReadLine() ?? string.Empty);
             }
             catch (TimeoutException)
             {

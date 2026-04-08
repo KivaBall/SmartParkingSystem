@@ -86,6 +86,8 @@ constexpr unsigned long LCD_MESSAGE_DURATION_MS = 3000UL;
 constexpr uint16_t EEPROM_ADDRESS = 0;
 constexpr size_t RX_BUFFER_SIZE = 40;
 constexpr uint8_t ALL_SLOTS_ENABLED_MASK = (1 << SLOT_COUNT) - 1;
+constexpr char PROTOCOL_FRAME_MARKER[] = "|||";
+constexpr uint8_t PROTOCOL_FRAME_MARKER_LENGTH = 3;
 
 // -----------------------------------------------------------------------------
 // Піни паркомісць
@@ -219,6 +221,9 @@ void sendConfig();
 void sendTelemetry();
 void sendCardsLine(const __FlashStringHelper *prefix, byte count, const byte list[][UID_LENGTH]);
 void sendDisplayTextLine(const __FlashStringHelper *key, const char *value);
+void beginProtocolFrame();
+void endProtocolFrame();
+bool unwrapProtocolFrame(char *line);
 void handleBluetoothInput();
 void dispatchCommand(char *line);
 void handleHelloCommand(char *context);
@@ -607,34 +612,42 @@ void showMessage(const char *line1, const char *line2)
 // Уніфіковані відповіді на команди застосунку.
 void sendOk(const __FlashStringHelper *scope, const __FlashStringHelper *message)
 {
+    beginProtocolFrame();
     btSerial.print(F("OK|"));
     btSerial.print(scope);
     btSerial.print(F("|"));
-    btSerial.println(message);
+    btSerial.print(message);
+    endProtocolFrame();
 }
 
 void sendError(const __FlashStringHelper *scope, const __FlashStringHelper *message)
 {
+    beginProtocolFrame();
     btSerial.print(F("ERR|"));
     btSerial.print(scope);
     btSerial.print(F("|"));
-    btSerial.println(message);
+    btSerial.print(message);
+    endProtocolFrame();
 }
 
 void sendOk(const char *scope, const char *message)
 {
+    beginProtocolFrame();
     btSerial.print(F("OK|"));
     btSerial.print(scope);
     btSerial.print(F("|"));
-    btSerial.println(message);
+    btSerial.print(message);
+    endProtocolFrame();
 }
 
 void sendError(const char *scope, const char *message)
 {
+    beginProtocolFrame();
     btSerial.print(F("ERR|"));
     btSerial.print(scope);
     btSerial.print(F("|"));
-    btSerial.println(message);
+    btSerial.print(message);
+    endProtocolFrame();
 }
 
 // -----------------------------------------------------------------------------
@@ -644,7 +657,9 @@ void sendError(const char *scope, const char *message)
 // По суті це відповідь "так, я саме контролер Smart Parking".
 void sendHello()
 {
-    btSerial.println(F("HELLO_OK|device=SMART_PARKING|fw=2|slots=6|transport=HC05"));
+    beginProtocolFrame();
+    btSerial.print(F("HELLO_OK|device=SMART_PARKING|fw=2|slots=6|transport=HC05"));
+    endProtocolFrame();
 }
 
 // -----------------------------------------------------------------------------
@@ -653,11 +668,13 @@ void sendHello()
 // Короткий профіль того, що саме це за контролер.
 void sendProfile()
 {
+    beginProtocolFrame();
 #if ENABLE_LCD
-    btSerial.println(F("PROFILE|board=ATmega328P|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05|slots=6"));
+    btSerial.print(F("PROFILE|board=ATmega328P|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05|slots=6"));
 #else
-    btSerial.println(F("PROFILE|board=ATmega328P|rfid=MFRC522|lcd=DISABLED|gate=SERVO|transport=HC05|slots=6"));
+    btSerial.print(F("PROFILE|board=ATmega328P|rfid=MFRC522|lcd=DISABLED|gate=SERVO|transport=HC05|slots=6"));
 #endif
+    endProtocolFrame();
 }
 
 // -----------------------------------------------------------------------------
@@ -665,6 +682,7 @@ void sendProfile()
 // -----------------------------------------------------------------------------
 void sendConfig()
 {
+    beginProtocolFrame();
     btSerial.print(F("CONFIG|open_angle="));
     btSerial.print(config.servoOpenAngle);
     btSerial.print(F("|closed_angle="));
@@ -678,20 +696,25 @@ void sendConfig()
     btSerial.print(F("|force_open="));
     btSerial.print(config.forceGateOpen);
     btSerial.print(F("|force_lock="));
-    btSerial.println(config.forceGateLock);
+    btSerial.print(config.forceGateLock);
+    endProtocolFrame();
 
     for (uint8_t i = 0; i < SLOT_COUNT; i++)
     {
+        beginProtocolFrame();
         btSerial.print(F("SLOTCFG|"));
         btSerial.print(i + 1);
         btSerial.print(F("|enabled="));
-        btSerial.println(isSlotEnabled(i) ? 1 : 0);
+        btSerial.print(isSlotEnabled(i) ? 1 : 0);
+        endProtocolFrame();
     }
 
+    beginProtocolFrame();
     btSerial.print(F("DISPLAYCFG|force="));
     btSerial.print(config.displayForceEnabled ? 1 : 0);
     btSerial.print(F("|forced_text="));
-    btSerial.println(config.displayForcedText);
+    btSerial.print(config.displayForcedText);
+    endProtocolFrame();
 
     sendDisplayTextLine(F("DEFAULT"), config.displayDefaultText);
     sendDisplayTextLine(F("ALLOWED"), config.displayAllowedText);
@@ -714,6 +737,7 @@ void sendTelemetry()
         remainingMs = temporaryGateExpiresAt - millis();
     }
 
+    beginProtocolFrame();
     btSerial.print(F("SNAPSHOT|mode="));
     btSerial.print(getGateModeText());
     btSerial.print(F("|remaining_ms="));
@@ -731,26 +755,32 @@ void sendTelemetry()
     btSerial.print(F("|threshold_cm="));
     btSerial.print(config.occupiedThresholdCm);
     btSerial.print(F("|telemetry_ms="));
-    btSerial.println(config.telemetryIntervalMs);
+    btSerial.print(config.telemetryIntervalMs);
+    endProtocolFrame();
 
+    beginProtocolFrame();
     btSerial.print(F("DISPLAY|text="));
     btSerial.print(currentDisplayText);
     btSerial.print(F("|forced="));
-    btSerial.println(currentDisplayForced ? 1 : 0);
+    btSerial.print(currentDisplayForced ? 1 : 0);
+    endProtocolFrame();
 
     for (uint8_t i = 0; i < SLOT_COUNT; i++)
     {
         writeSlotLine(i);
     }
 
+    beginProtocolFrame();
     btSerial.print(F("COUNTS|allowed="));
     btSerial.print(config.allowedCount);
     btSerial.print(F("|blocked="));
-    btSerial.println(config.blockedCount);
+    btSerial.print(config.blockedCount);
+    endProtocolFrame();
 }
 
 void sendCardsLine(const __FlashStringHelper *prefix, byte count, const byte list[][UID_LENGTH])
 {
+    beginProtocolFrame();
     btSerial.print(prefix);
     btSerial.print(F("|count="));
     btSerial.print(count);
@@ -761,19 +791,22 @@ void sendCardsLine(const __FlashStringHelper *prefix, byte count, const byte lis
         printUidHex(btSerial, list[i]);
     }
 
-    btSerial.println();
+    endProtocolFrame();
 }
 
 void sendDisplayTextLine(const __FlashStringHelper *key, const char *value)
 {
+    beginProtocolFrame();
     btSerial.print(F("DISPLAYTEXT|key="));
     btSerial.print(key);
     btSerial.print(F("|value="));
-    btSerial.println(value);
+    btSerial.print(value);
+    endProtocolFrame();
 }
 
 void writeSlotLine(uint8_t slotIndex)
 {
+    beginProtocolFrame();
     btSerial.print(F("SLOT|"));
     btSerial.print(slotIndex + 1);
     btSerial.print(F("|state="));
@@ -786,12 +819,60 @@ void writeSlotLine(uint8_t slotIndex)
 
     if (slotOccupied[slotIndex] && slotOccupiedSince[slotIndex] != 0)
     {
-        btSerial.println(millis() - slotOccupiedSince[slotIndex]);
+        btSerial.print(millis() - slotOccupiedSince[slotIndex]);
     }
     else
     {
-        btSerial.println(0);
+        btSerial.print(0);
     }
+    endProtocolFrame();
+}
+
+void beginProtocolFrame()
+{
+    btSerial.print(PROTOCOL_FRAME_MARKER);
+}
+
+void endProtocolFrame()
+{
+    btSerial.print(PROTOCOL_FRAME_MARKER);
+    btSerial.print('\n');
+}
+
+bool unwrapProtocolFrame(char *line)
+{
+    trimLine(line);
+    size_t length = strlen(line);
+    if (length == 0)
+    {
+        return false;
+    }
+
+    uint8_t leadingMarkerLength = 0;
+    while (leadingMarkerLength < PROTOCOL_FRAME_MARKER_LENGTH && line[leadingMarkerLength] == '|')
+    {
+        leadingMarkerLength++;
+    }
+
+    if (leadingMarkerLength == 0)
+    {
+        return true;
+    }
+
+    if (length < leadingMarkerLength + PROTOCOL_FRAME_MARKER_LENGTH)
+    {
+        return false;
+    }
+
+    if (strcmp(line + length - PROTOCOL_FRAME_MARKER_LENGTH, PROTOCOL_FRAME_MARKER) != 0)
+    {
+        return false;
+    }
+
+    line[length - PROTOCOL_FRAME_MARKER_LENGTH] = '\0';
+    memmove(line, line + leadingMarkerLength, strlen(line + leadingMarkerLength) + 1);
+    trimLine(line);
+    return strlen(line) > 0;
 }
 
 // -----------------------------------------------------------------------------
@@ -812,10 +893,12 @@ void handleBluetoothInput()
         if (incoming == '\n')
         {
             rxBuffer[rxIndex] = '\0';
-            trimLine(rxBuffer);
             if (rxIndex > 0)
             {
-                dispatchCommand(rxBuffer);
+                if (unwrapProtocolFrame(rxBuffer))
+                {
+                    dispatchCommand(rxBuffer);
+                }
             }
 
             rxIndex = 0;
@@ -882,8 +965,10 @@ void dispatchCommand(char *line)
     }
     else
     {
+        beginProtocolFrame();
         btSerial.print(F("RECEIVED|"));
-        btSerial.println(originalLine);
+        btSerial.print(originalLine);
+        endProtocolFrame();
         sendError(F("CMD"), F("UNKNOWN_COMMAND"));
     }
 }
@@ -1360,6 +1445,7 @@ void handleRfid()
     byte uid[UID_LENGTH];
     memcpy(uid, rfid.uid.uidByte, UID_LENGTH);
 
+    beginProtocolFrame();
     btSerial.print(F("EVENT|card="));
     if (compareUid(uid, config.allowedCards, config.allowedCount))
     {
@@ -1399,7 +1485,7 @@ void handleRfid()
     }
 
     printUidHex(btSerial, uid);
-    btSerial.println();
+    endProtocolFrame();
 
     rfid.PICC_HaltA();
     rfid.PCD_StopCrypto1();
