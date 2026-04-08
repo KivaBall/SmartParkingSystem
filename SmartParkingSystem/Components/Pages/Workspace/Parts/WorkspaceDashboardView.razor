@@ -1,0 +1,165 @@
+﻿@namespace SmartParkingSystem.Components.Pages.Workspace.Parts
+@inherits WorkspaceDashboardViewBase
+
+<div class="@PageClass">
+    <section class="@HeroSectionClass" style="@HeroSectionStyle">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div class="space-y-4">
+                <div class="@GetConnectionChipClass()">
+                    <i data-lucide="badge-check"></i>
+                    <span>@(Snapshot.IsConnected ? Texts.ConnectedChipLabel : Texts.DisconnectedChipLabel)</span>
+                </div>
+
+                <div class="space-y-4">
+                    <h1 class="text-5xl font-extrabold leading-none text-sky-500 sm:text-6xl">
+                        @HeroTitle
+                    </h1>
+
+                    <p class="max-w-md text-base leading-7 text-calm-700 sm:text-lg">
+                        @Texts.HeroDescription
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+                <div class="rounded-md bg-white/85 p-5">
+                    <p class="text-sm font-semibold text-calm-500">@Texts.ControllerTitle</p>
+                    <p class="text-base font-semibold text-calm-900">
+                        @(Snapshot.IsConnected ? Snapshot.TargetLabel : Texts.NoConnectionValue)
+                    </p>
+                </div>
+
+                <div class="rounded-md bg-white/85 p-5">
+                    <p class="text-sm font-semibold text-calm-500">@Texts.LastSyncTitle</p>
+                    <p class="text-base font-semibold text-calm-900">@GetLastSyncValue()</p>
+                </div>
+
+                <div class="rounded-md bg-brand-100/70 p-5">
+                    <p class="text-sm font-semibold text-calm-500">@Texts.FreePlacesTitle</p>
+                    <p class="text-base font-semibold text-calm-900">@Snapshot.FreeCount</p>
+                </div>
+
+                <div class="rounded-md bg-mint-100 p-5">
+                    <p class="text-sm font-semibold text-calm-500">@Texts.OccupiedPlacesTitle</p>
+                    <p class="text-base font-semibold text-calm-900">@Snapshot.OccupiedCount</p>
+                </div>
+
+                <div class="rounded-md bg-white/85 p-5">
+                    <p class="text-sm font-semibold text-calm-500">@Texts.AllowedCardsTitle</p>
+                    <p class="text-base font-semibold text-calm-900">@Snapshot.AllowedCount</p>
+                </div>
+
+                <div class="rounded-md bg-warm-100 p-5">
+                    <p class="text-sm font-semibold text-calm-500">@Texts.DisabledPlacesTitle</p>
+                    <p class="text-base font-semibold text-calm-900">@Snapshot.DisabledCount</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="space-y-4">
+        <div class="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+            <article class="@ConnectionSectionClass" style="@BottomConnectionStyle">
+                <div class="mb-8 flex items-center justify-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
+                        <i data-lucide="plug-zap"></i>
+                    </div>
+
+                    <div>
+                        <p class="text-base font-semibold text-calm-900">@Texts.ConnectionSectionTitle</p>
+                    </div>
+                </div>
+
+                <div class="grid gap-3">
+                    <div class="rounded-md bg-white/85 px-4 py-4">
+                        <p class="text-sm font-semibold text-calm-500">@Texts.TargetLabel</p>
+                        <p class="text-base font-semibold text-calm-900">@(Snapshot.IsConnected ? Snapshot.TargetLabel : Texts.NoConnectionValue)</p>
+                    </div>
+
+                    <div class="rounded-md bg-white/85 px-4 py-4">
+                        <p class="text-sm font-semibold text-calm-500">@Texts.BoardLabel</p>
+                        <p class="text-base font-semibold text-calm-900">@(Snapshot.IsConnected ? Snapshot.BoardLabel : Texts.NotAvailableValue)</p>
+                    </div>
+
+                    <div class="rounded-md bg-white/85 px-4 py-4">
+                        <p class="text-sm font-semibold text-calm-500">@Texts.TransportLabel</p>
+                        <p class="text-base font-semibold text-calm-900">@(Snapshot.IsConnected ? Snapshot.TransportLabel : Texts.NotAvailableValue)</p>
+                    </div>
+
+                    <div class="rounded-md bg-white/85 px-4 py-4">
+                        <p class="text-sm font-semibold text-calm-500">@Texts.ConnectedAtLabel</p>
+                        <p class="text-base font-semibold text-calm-900">@GetConnectedAtValue()</p>
+                    </div>
+
+                    <div class="rounded-md bg-white/85 px-4 py-4">
+                        <p class="text-sm font-semibold text-calm-500">@Texts.SlotCapacityLabel</p>
+                        <p class="text-base font-semibold text-calm-900">@GetSlotCapacityValue()</p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="@GateSectionClass" style="@BottomGateStyle">
+                <div class="mb-8 flex items-center justify-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
+                        <i data-lucide="waypoints"></i>
+                    </div>
+
+                    <div>
+                        <p class="text-base font-semibold text-calm-900">@Texts.GateSectionTitle</p>
+                    </div>
+                </div>
+
+                <div class="grid gap-3">
+                    <div class="rounded-md bg-white/85 px-4 py-4">
+                        <p class="text-sm font-semibold text-calm-500">@Texts.CurrentStateLabel</p>
+                        <p class="text-base font-semibold text-calm-900">@GetGateStateLabel()</p>
+                    </div>
+
+                    <div class="rounded-md bg-white/85 px-4 py-4">
+                        <p class="text-sm font-semibold text-calm-500">@Texts.ForceOpenLabel</p>
+                        <p class="text-base font-semibold text-calm-900">@(Snapshot.IsForceOpen ? Texts.ForceOpenStateLabel : Texts.ClosedStateLabel)</p>
+                    </div>
+
+                    <div class="rounded-md bg-white/85 px-4 py-4">
+                        <p class="text-sm font-semibold text-calm-500">@Texts.ForceLockLabel</p>
+                        <p class="text-base font-semibold text-calm-900">@(Snapshot.IsForceLocked ? Texts.LockedStateLabel : Texts.ClosedStateLabel)</p>
+                    </div>
+
+                    <div class="rounded-md bg-white/85 px-4 py-4">
+                        <p class="text-sm font-semibold text-calm-500">@Texts.RemainingLabel</p>
+                        <p class="text-base font-semibold text-calm-900">@GetRemainingValue()</p>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <article class="@SystemSectionClass" style="@BottomSystemStyle">
+            <div class="mb-8 flex items-center justify-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-warm-700">
+                    <i data-lucide="settings-2"></i>
+                </div>
+
+                <div>
+                    <p class="text-base font-semibold text-calm-900">@Texts.SystemSectionTitle</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3 sm:flex-row">
+                <div class="flex-1 rounded-md bg-white/85 px-4 py-4">
+                    <p class="text-sm font-semibold text-calm-500">@Texts.TelemetryLabel</p>
+                    <p class="text-base font-semibold text-calm-900">@GetTelemetryValue()</p>
+                </div>
+
+                <div class="flex-1 rounded-md bg-white/85 px-4 py-4">
+                    <p class="text-sm font-semibold text-calm-500">@Texts.ThresholdLabel</p>
+                    <p class="text-base font-semibold text-calm-900">@GetThresholdValue()</p>
+                </div>
+
+                <div class="flex-1 rounded-md bg-white/85 px-4 py-4">
+                    <p class="text-sm font-semibold text-calm-500">@Texts.OpenWindowLabel</p>
+                    <p class="text-base font-semibold text-calm-900">@GetOpenWindowValue()</p>
+                </div>
+            </div>
+        </article>
+    </section>
+</div>

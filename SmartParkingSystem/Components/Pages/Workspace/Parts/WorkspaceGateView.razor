@@ -1,0 +1,68 @@
+﻿@namespace SmartParkingSystem.Components.Pages.Workspace.Parts
+@inherits WorkspaceGateViewBase
+
+@if (IsLoading)
+{
+    <section class="rounded-md bg-white/85 p-6">
+        <p class="text-base font-semibold text-calm-900">@Texts.GateSubtitle</p>
+        <p class="mt-2 text-sm font-semibold text-calm-500">@Texts.CloseButton...</p>
+    </section>
+}
+else
+{
+    <section class="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+        <article class="@GateVisualClass" style="@GateVisualStyle">
+            <div class="grid gap-4">
+                <div class="flex min-h-[12.5rem] items-center justify-center rounded-md bg-calm-50 @VisualAccentClass">
+                    <i data-lucide="rows-4" class="h-64 w-64"></i>
+                </div>
+
+                <div class="rounded-md bg-calm-50 px-4 py-4 text-center @VisualAccentClass">
+                    <p class="text-5xl font-extrabold leading-none">@CountdownLabel</p>
+                </div>
+            </div>
+        </article>
+
+        <article class="@GateActionsClass" style="@GateActionsStyle">
+            <div class="mb-8 flex items-center justify-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-warm-700">
+                    <i data-lucide="panel-top-open"></i>
+                </div>
+
+                <div>
+                    <p class="text-base font-semibold text-calm-900">@Texts.GateSubtitle</p>
+                </div>
+            </div>
+
+            <div class="grid gap-3">
+                <button class="@PrimaryActionButtonClass"
+                        disabled="@IsForceOpenDisabled"
+                        @onclick="ForceOpenAsync">
+                    <i data-lucide="arrow-up-to-line"></i>
+                    <span>@Texts.ForceOpenButton</span>
+                </button>
+
+                <button class="@MintActionButtonClass"
+                        disabled="@IsTemporaryOpenDisabled"
+                        @onclick="OpenTemporarilyAsync">
+                    <i data-lucide="timer-reset"></i>
+                    <span>@Texts.OpenTemporarilyButton</span>
+                </button>
+
+                <button class="@NeutralActionButtonClass"
+                        disabled="@IsCloseDisabled"
+                        @onclick="CloseAsync">
+                    <i data-lucide="arrow-down-to-line"></i>
+                    <span>@Texts.CloseButton</span>
+                </button>
+
+                <button class="@WarmActionButtonClass"
+                        disabled="@IsLockDisabled"
+                        @onclick="ToggleLockAsync">
+                    <i data-lucide="shield-ban"></i>
+                    <span>@LockButtonLabel</span>
+                </button>
+            </div>
+        </article>
+    </section>
+}

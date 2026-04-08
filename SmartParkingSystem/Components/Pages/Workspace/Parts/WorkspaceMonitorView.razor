@@ -1,0 +1,121 @@
+﻿@namespace SmartParkingSystem.Components.Pages.Workspace.Parts
+@inherits WorkspaceMonitorViewBase
+
+@if (IsLoading)
+{
+    <section class="rounded-md bg-white/85 p-6">
+        <p class="text-base font-semibold text-calm-900">@Texts.Title</p>
+        <p class="mt-2 text-sm font-semibold text-calm-500">@Texts.RefreshingMessage</p>
+    </section>
+}
+else
+{
+    <section class="space-y-4">
+        <article class="@DisplayClass" style="@DisplayStyle">
+            <div class="mb-8 flex items-center justify-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
+                    <i data-lucide="monitor"></i>
+                </div>
+
+                <p class="text-base font-semibold text-calm-900">@Texts.CurrentTextTitle</p>
+            </div>
+
+            <div class="flex min-h-[12.5rem] items-center justify-center rounded-md bg-calm-50 px-4 py-4 text-center">
+                <p class="text-5xl font-extrabold leading-none text-brand-400"
+                   style="font-family: 'Orbitron', 'Manrope', sans-serif;">
+                    @DisplayText
+                </p>
+            </div>
+        </article>
+
+        <article class="@ControlsClass" style="@ControlsStyle">
+            <div class="mb-8 flex items-center justify-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-warm-700">
+                    <i data-lucide="sliders-horizontal"></i>
+                </div>
+
+                <p class="text-base font-semibold text-calm-900">@Texts.Title</p>
+            </div>
+
+            <div class="space-y-3">
+                <div class="grid gap-3 xl:grid-cols-[1.2fr_auto_auto_auto]">
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="text-sm font-semibold text-calm-500">@StatusText</p>
+                    </div>
+
+                    <button class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-mint-300 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-mint-200 disabled:cursor-default disabled:opacity-50"
+                            disabled="@IsBusy"
+                            @onclick="RefreshAsync">
+                        <i data-lucide="refresh-cw"></i>
+                        <span>@Texts.RefreshButton</span>
+                    </button>
+
+                    <button class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-brand-300 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-brand-400 disabled:cursor-default disabled:opacity-50"
+                            disabled="@(!HasChanges || IsBusy)"
+                            @onclick="SaveAsync">
+                        <i data-lucide="save"></i>
+                        <span>@Texts.SaveButton</span>
+                    </button>
+
+                    <button class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-calm-100 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-calm-200 disabled:cursor-default disabled:opacity-50"
+                            disabled="@IsBusy"
+                            @onclick="ResetAsync">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span>@Texts.ResetButton</span>
+                    </button>
+                </div>
+
+                <div class="grid gap-3 lg:grid-cols-[0.75fr_1.25fr]">
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.ForceModeLabel</p>
+                        <button class="inline-flex min-h-12 w-full items-center justify-center rounded-md px-4 py-3 text-sm font-semibold transition-all duration-500 ease-out @(EditableSettings.ForceEnabled ? "bg-brand-200 text-calm-900 hover:bg-brand-400" : "bg-calm-50 text-calm-700 hover:bg-calm-100")"
+                                type="button"
+                                @onclick="ToggleForceAsync">
+                            <span>@(EditableSettings.ForceEnabled ? Texts.ForceEnabledLabel : Texts.ForceDisabledLabel)</span>
+                        </button>
+                    </div>
+
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.ForcedTextLabel</p>
+                        <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                               maxlength="16"
+                               @bind="EditableSettings.ForcedText"/>
+                    </div>
+                </div>
+
+                <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.DefaultTextLabel</p>
+                        <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                               maxlength="16"
+                               @bind="EditableSettings.DefaultText"/>
+                    </div>
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.AllowedTextLabel</p>
+                        <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                               maxlength="16"
+                               @bind="EditableSettings.AllowedText"/>
+                    </div>
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.BlockedTextLabel</p>
+                        <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                               maxlength="16"
+                               @bind="EditableSettings.BlockedText"/>
+                    </div>
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.InvalidTextLabel</p>
+                        <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                               maxlength="16"
+                               @bind="EditableSettings.InvalidText"/>
+                    </div>
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.LockedTextLabel</p>
+                        <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                               maxlength="16"
+                               @bind="EditableSettings.LockedText"/>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </section>
+}
