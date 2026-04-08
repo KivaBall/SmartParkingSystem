@@ -1,6 +1,6 @@
 using SmartParkingSystem.Models.DeviceConnection;
 using SmartParkingSystem.Models.Localization;
-using SmartParkingSystem.Services.DeviceConnection;
+using SmartParkingSystem.Services.DeviceConnection.Connection;
 
 namespace SmartParkingSystem.Components.Pages.Connection;
 
@@ -41,28 +41,22 @@ public sealed class ConnectionPageCoordinator(IDeviceConnectionService connectio
         SyncDescriptions(state, texts);
     }
 
-    public async Task<ConnectionResult> TryAutoConnectAsync(ConnectionPageState state, ConnectionTexts texts)
+    public static void SetAutoConnectBusy(ConnectionPageState state, ConnectionTexts texts)
     {
         state.IsBusy = true;
         state.AutomaticDescription = texts.AutomaticSearchingDescription;
-        return await connectionService.TryAutoConnectAsync();
     }
 
-    public async Task<ConnectionResult> TryManualConnectAsync(ConnectionPageState state, ConnectionTexts texts)
+    public static void SetManualConnectBusy(ConnectionPageState state, ConnectionTexts texts)
     {
         state.IsBusy = true;
         state.AdvancedDescription = texts.AdvancedConnectingDescription;
-        return await connectionService.TryConnectAsync(state.SelectedTargetId);
     }
 
-    public async Task RefreshTargetsAsync(ConnectionPageState state, ConnectionTexts texts)
+    public static void SetRefreshBusy(ConnectionPageState state, ConnectionTexts texts)
     {
         state.IsBusy = true;
         state.AdvancedDescription = texts.AdvancedRefreshingDescription;
-        state.Targets = await connectionService.RefreshTargetsAsync();
-        state.SelectedTargetId = state.Targets.Count > 0 ? state.Targets[0].Id : null;
-        state.IsBusy = false;
-        state.AdvancedDescription = texts.AdvancedIdleDescription;
     }
 
     public static bool ApplyConnectionResult(
