@@ -60,7 +60,7 @@ One important motivation for the new app is the need for administrative control.
 
 ## Telemetry And Analytics
 
-The Arduino side is expected to send system-related data over Bluetooth approximately every 10 seconds. That data should then be consumed by the app and used for:
+The Arduino side is expected to send system-related data over Bluetooth on a periodic basis. In the current reference firmware, parking status is emitted every `0.5s`, but this interval should be treated as configurable in future revisions. That data should then be consumed by the app and used for:
 
 - live state display
 - event interpretation
@@ -76,6 +76,6 @@ In short, the application is meant to become both:
 
 The original Arduino firmware is stored alongside these docs as a starting-point reference:
 
-- `SmartParkingSystemOriginal.ino`
+- `arduino/SmartParkingSystemOriginal.ino`
 
 That file reflects the starting hardware logic before later refinements.
