@@ -170,8 +170,10 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 
 - `animate-enter-left`
 - `animate-enter-right`
+- `animate-enter-bottom`
 - `animate-exit-left`
 - `animate-exit-right`
+- `animate-exit-bottom`
 
 ## Allowed Form Classes
 
