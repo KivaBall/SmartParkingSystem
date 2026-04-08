@@ -1,0 +1,146 @@
+﻿using SmartParkingSystem.Models.Localization;
+
+namespace SmartParkingSystem.Services.Localization;
+
+internal static partial class LocalizationTextCatalog
+{
+    private static readonly DashboardTexts EnglishDashboardTexts = new DashboardTexts(
+        "Controller connected",
+        "Controller offline",
+        "Smart parking overview",
+        "A compact live view of connection health, parking occupancy, gate state, card access, and core controller values",
+        "Controller",
+        "Last sync",
+        "Free places",
+        "Occupied places",
+        "Disabled places",
+        "Allowed cards",
+        "Blocked cards",
+        "Gate state",
+        "Connection",
+        "Gate",
+        "System",
+        "Quick actions",
+        "Target",
+        "Board",
+        "Transport",
+        "Connected at",
+        "Slot capacity",
+        "Current state",
+        "Force open",
+        "Force lock",
+        "Remaining",
+        "Telemetry",
+        "Threshold",
+        "Open window",
+        "Refresh snapshot",
+        "Open parking",
+        "Open gate",
+        "Open admin",
+        "No connection",
+        "N/A",
+        "Now",
+        "s",
+        "ms",
+        "cm",
+        "Open",
+        "Closed",
+        "Locked",
+        "Forced open");
+
+    private static readonly DashboardTexts UkrainianDashboardTexts = new DashboardTexts(
+        "Контролер підключено",
+        "Контролер не в мережі",
+        "Огляд системи смарт-паркінгу",
+        "Короткий live-огляд зв'язку з контролером, стану паркомісць, воріт, карток і основних параметрів",
+        "Контролер",
+        "Остання синхронізація",
+        "Вільні місця",
+        "Зайняті місця",
+        "Вимкнені місця",
+        "Дозволені картки",
+        "Заблоковані картки",
+        "Стан воріт",
+        "Зв'язок",
+        "Ворота",
+        "Система",
+        "Швидкі дії",
+        "Ціль",
+        "Плата",
+        "Транспорт",
+        "Підключено о",
+        "Місткість",
+        "Поточний стан",
+        "Примусове відкриття",
+        "Примусове блокування",
+        "Залишок",
+        "Телеметрія",
+        "Поріг",
+        "Час відкриття",
+        "Оновити snapshot",
+        "Відкрити паркінг",
+        "Відкрити ворота",
+        "Відкрити адмін",
+        "Немає з'єднання",
+        "Н/Д",
+        "Зараз",
+        "с",
+        "мс",
+        "см",
+        "Відкрито",
+        "Закрито",
+        "Заблоковано",
+        "Примусово відкрито");
+
+    private static readonly SettingsTexts EnglishSettingsTexts = new SettingsTexts(
+        "Current device",
+        "Interface language",
+        "Parking preferences",
+        "Environment",
+        "Session",
+        "Back to connection",
+        "Close application",
+        "Hide disabled slots",
+        "Edit parking",
+        "Enabled",
+        "Disabled",
+        "Platform",
+        "Screen",
+        "OS Version",
+        "Localization",
+        "Framework",
+        ".NET Version",
+        "Styling",
+        "Icon system");
+
+    private static readonly SettingsTexts UkrainianSettingsTexts = new SettingsTexts(
+        "Поточний пристрій",
+        "Мова інтерфейсу",
+        "Параметри паркінгу",
+        "Середовище",
+        "Сесія",
+        "Назад до підключення",
+        "Закрити застосунок",
+        "Скрити вимкнені слоти",
+        "Редагувати паркінг",
+        "Увімкнено",
+        "Вимкнено",
+        "Платформа",
+        "Екран",
+        "Версія ОС",
+        "Локалізація",
+        "Фреймворк",
+        "Версія .NET",
+        "Стилізація",
+        "Система іконок");
+
+    public static DashboardTexts GetDashboardTexts(AppLanguage language)
+    {
+        return language == AppLanguage.Ukrainian ? UkrainianDashboardTexts : EnglishDashboardTexts;
+    }
+
+    public static SettingsTexts GetSettingsTexts(AppLanguage language)
+    {
+        return language == AppLanguage.Ukrainian ? UkrainianSettingsTexts : EnglishSettingsTexts;
+    }
+}
