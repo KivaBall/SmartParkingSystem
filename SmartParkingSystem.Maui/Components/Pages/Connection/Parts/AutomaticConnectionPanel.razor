@@ -1,0 +1,14 @@
+@namespace SmartParkingSystem.Maui.Components.Pages.Connection.Parts
+@inherits AutomaticConnectionPanelBase
+
+<div class="@ContentClass">
+    <div class="grid min-h-[12.5rem] gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-center">
+        <button class="@PrimaryButtonClass" @onclick="OnConnect" disabled="@IsBusy">
+            @ButtonText
+        </button>
+
+        <p class="text-sm leading-6 text-calm-700">
+            @Description
+        </p>
+    </div>
+</div>
