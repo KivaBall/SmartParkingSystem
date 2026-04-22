@@ -1,0 +1,64 @@
+@namespace SmartParkingSystem.Maui.Components.Pages.Workspace.Parts
+@inherits WorkspaceEventsViewBase
+
+<section class="space-y-4">
+    <article class="@FiltersClass" style="@FiltersStyle">
+        <div class="mb-8 flex items-center justify-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
+                <i data-lucide="history"></i>
+            </div>
+
+            <p class="text-base font-semibold text-calm-900">@Texts.Title</p>
+        </div>
+
+        <div class="space-y-3">
+            <div class="rounded-md bg-white px-4 py-4">
+                <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                       placeholder="@Texts.SearchPlaceholder"
+                       @bind="SearchText"/>
+            </div>
+
+            <div class="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+                @foreach (var filter in Filters)
+                {
+                    <button class="@GetFilterClass(filter.Category)"
+                            type="button"
+                            @onclick="@(() => SelectFilter(filter.Category))">
+                        @filter.Label
+                    </button>
+                }
+            </div>
+        </div>
+    </article>
+
+    <article class="@ListClass" style="@ListStyle">
+        <div class="mb-8 flex items-center justify-between gap-3">
+            <p class="text-base font-semibold text-calm-900">@Texts.LastTwoMinutesLabel</p>
+            <p class="text-sm font-semibold text-calm-500">@FilteredEvents.Count</p>
+        </div>
+
+        @if (FilteredEvents.Count == 0)
+        {
+            <div class="rounded-md bg-white/85 px-4 py-6 text-center">
+                <p class="text-base font-semibold text-calm-900">@Texts.EmptyStateTitle</p>
+                <p class="mt-2 text-sm font-semibold text-calm-500">@Texts.EmptyStateDescription</p>
+            </div>
+        }
+        else
+        {
+            <div class="grid gap-3">
+                @foreach (var item in FilteredEvents)
+                {
+                    <div class="rounded-md bg-white/85 px-4 py-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-base font-semibold text-calm-900">@GetEventTitle(item)</p>
+                            <p class="text-sm font-semibold text-calm-500">@FormatTimestamp(item.CreatedAt)</p>
+                        </div>
+
+                        <p class="mt-2 text-sm font-semibold text-calm-700">@GetEventDescription(item)</p>
+                    </div>
+                }
+            </div>
+        }
+    </article>
+</section>
