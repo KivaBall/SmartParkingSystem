@@ -34,7 +34,7 @@ public class WorkspaceDashboardViewBase : ComponentBase, IDisposable
     protected DashboardTexts Texts => RequireLocalizationService().GetDashboardTexts();
 
     protected string HeroTitle => RequireLocalizationService().CurrentLanguage == AppLanguage.Ukrainian
-        ? "??????? ??????? ????? ????????"
+        ? "Дашборд Системи Смарт Паркінгу"
         : Texts.HeroTitle;
 
     protected string PageClass => IsExiting

@@ -135,7 +135,7 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
             4 => Texts.ParkingSpot4Label,
             5 => Texts.ParkingSpot5Label,
             6 => Texts.ParkingSpot6Label,
-            _ when RequireLocalizationService().CurrentLanguage == AppLanguage.Ukrainian => $"????? P{slotNumber}",
+            _ when RequireLocalizationService().CurrentLanguage == AppLanguage.Ukrainian => $"Місце P{slotNumber}",
             _ => $"Parking spot {slotNumber}"
         };
     }
