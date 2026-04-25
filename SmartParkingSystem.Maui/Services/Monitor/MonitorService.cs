@@ -178,14 +178,9 @@ public sealed class MonitorService(
 
     private async Task RefreshConfigurationOrThrowAsync(CancellationToken cancellationToken)
     {
-        var configuration = await sessionService.RefreshConfigurationAsync(cancellationToken);
-        if (configuration is not null)
-        {
-            return;
-        }
-
-        throw new InvalidOperationException(
-            "Monitor configuration was saved, but the controller configuration could not be refreshed.");
+        _ = await sessionService.RefreshConfigurationAsync(cancellationToken)
+            ?? throw new InvalidOperationException(
+                "Monitor configuration was saved, but the controller configuration could not be refreshed.");
     }
 
     private async Task TryRefreshSnapshotAsync()

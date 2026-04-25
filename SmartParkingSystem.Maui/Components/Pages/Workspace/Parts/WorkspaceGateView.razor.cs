@@ -45,7 +45,7 @@ public class WorkspaceGateViewBase : ComponentBase, IDisposable
     protected bool IsForceOpenDisabled => IsBusy || !Snapshot.CanForceOpen;
     protected bool IsTemporaryOpenDisabled => IsBusy || !Snapshot.CanOpenTemporarily;
     protected bool IsCloseDisabled => IsBusy || !Snapshot.CanClose;
-    protected bool IsLockDisabled => IsBusy || !Snapshot.CanToggleLock;
+    protected bool IsLockDisabled => IsBusy;
 
     protected string VisualContainerClass => Snapshot.Mode switch
     {

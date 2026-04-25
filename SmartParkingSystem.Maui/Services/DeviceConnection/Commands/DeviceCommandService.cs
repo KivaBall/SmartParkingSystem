@@ -268,14 +268,14 @@ public sealed class DeviceCommandService(
             ["ERR|DISPLAY|MISSING_TEXT_KEY", "ERR|DISPLAY|UNKNOWN_TEXT_KEY"]);
     }
 
-    private async Task<DeviceCommandResult> SendCommandAsync(
+    private Task<DeviceCommandResult> SendCommandAsync(
         string command,
         string expectedScope,
         string expectedSuccessPrefix,
         CancellationToken cancellationToken,
         IReadOnlyList<string>? expectedErrorPrefixes = null)
     {
-        return await protocolExecutionService.RunExclusiveAsync(
+        return protocolExecutionService.RunExclusiveAsync(
             async token =>
             {
                 if (!transportService.IsOpen)

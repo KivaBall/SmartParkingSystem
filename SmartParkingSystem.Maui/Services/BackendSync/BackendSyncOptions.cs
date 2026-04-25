@@ -2,28 +2,31 @@ namespace SmartParkingSystem.Maui.Services.BackendSync;
 
 public sealed class BackendSyncOptions
 {
-    public string WindowsBaseUrl { get; init; } = "http://localhost:5112";
+    private const string WindowsBaseUrl = "http://127.0.0.1:5112";
 
-    public string AndroidBaseUrl { get; init; } = "http://10.0.2.2:5112";
+    private const string AndroidBaseUrl = "http://10.0.2.2:5112";
 
-    public string DefaultBaseUrl { get; init; } = "http://localhost:5112";
+    private const string DefaultBaseUrl = "http://127.0.0.1:5112";
 
-    public string IngestPath { get; init; } = "api/device-state/ingest";
+    private const string HubPath = "hubs/device-state";
 
-    public string ResolveBaseUrl()
+    public string ResolveHubUrl()
     {
-        var platform = DeviceInfo.Current.Platform;
+        return CombineUrl(ResolveBaseUrl(), HubPath);
+    }
 
-        if (platform == DevicePlatform.Android)
+    private string ResolveBaseUrl()
+    {
+        return DeviceInfo.Current.Platform switch
         {
-            return AndroidBaseUrl;
-        }
+            var platform when platform == DevicePlatform.Android => AndroidBaseUrl,
+            var platform when platform == DevicePlatform.WinUI => WindowsBaseUrl,
+            _ => DefaultBaseUrl
+        };
+    }
 
-        if (platform == DevicePlatform.WinUI)
-        {
-            return WindowsBaseUrl;
-        }
-
-        return DefaultBaseUrl;
+    private static string CombineUrl(string baseUrl, string relativePath)
+    {
+        return $"{baseUrl.TrimEnd('/')}/{relativePath.TrimStart('/')}";
     }
 }

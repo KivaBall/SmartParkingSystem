@@ -56,7 +56,7 @@ internal static class DeviceProtocolParser
                 forceOpen,
                 forceLock,
                 Enumerable.Range(1, slotEnabled.Count)
-                    .Select(index => slotEnabled.GetValueOrDefault(index))
+                    .Select(slotEnabled.GetValueOrDefault)
                     .ToArray(),
                 displayForceEnabled,
                 displayForcedText,
@@ -322,13 +322,13 @@ internal static class DeviceProtocolParser
         return values;
     }
 
-    private static string GetString(IReadOnlyDictionary<string, string> values, string key)
+    private static string GetString(Dictionary<string, string> values, string key)
     {
         return values.TryGetValue(key, out var value) ? value : string.Empty;
     }
 
     private static bool TryGetRequiredString(
-        IReadOnlyDictionary<string, string> values,
+        Dictionary<string, string> values,
         string key,
         out string value)
     {
@@ -343,7 +343,7 @@ internal static class DeviceProtocolParser
     }
 
     private static bool TryGetRequiredInt(
-        IReadOnlyDictionary<string, string> values,
+        Dictionary<string, string> values,
         string key,
         out int value)
     {
@@ -352,7 +352,7 @@ internal static class DeviceProtocolParser
     }
 
     private static bool TryGetRequiredLong(
-        IReadOnlyDictionary<string, string> values,
+        Dictionary<string, string> values,
         string key,
         out long value)
     {
@@ -361,7 +361,7 @@ internal static class DeviceProtocolParser
     }
 
     private static bool TryGetRequiredBool(
-        IReadOnlyDictionary<string, string> values,
+        Dictionary<string, string> values,
         string key,
         out bool value)
     {

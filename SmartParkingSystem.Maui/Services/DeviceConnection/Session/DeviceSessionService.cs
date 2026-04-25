@@ -18,7 +18,7 @@ public sealed class DeviceSessionService(
     private static readonly TimeSpan DefaultSnapshotRefreshInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan MinimumSnapshotRefreshInterval = TimeSpan.FromMilliseconds(250);
 
-    private readonly object _sessionSync = new object();
+    private readonly Lock _sessionSync = new Lock();
     private CancellationTokenSource? _refreshCancellationTokenSource;
     private Task? _refreshLoopTask;
 
@@ -293,12 +293,9 @@ public sealed class DeviceSessionService(
     private TimeSpan GetSnapshotRefreshInterval()
     {
         var configuredMs = CurrentSession?.Configuration.TelemetryIntervalMs ?? 0;
-        if (configuredMs <= 0)
-        {
-            return DefaultSnapshotRefreshInterval;
-        }
-
-        return TimeSpan.FromMilliseconds(Math.Max(configuredMs, (int)MinimumSnapshotRefreshInterval.TotalMilliseconds));
+        return configuredMs <= 0
+            ? DefaultSnapshotRefreshInterval
+            : TimeSpan.FromMilliseconds(Math.Max(configuredMs, (int)MinimumSnapshotRefreshInterval.TotalMilliseconds));
     }
 
     private void SetCurrentSession(DeviceControllerSession? session)

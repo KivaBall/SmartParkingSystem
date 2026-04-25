@@ -55,9 +55,7 @@ public sealed class DeviceTelemetryService(
                 string? configLine = null;
                 var slotEnabled = new Dictionary<int, bool>();
                 var displayTexts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                var hasDisplayConfig = false;
-                var displayForceEnabled = false;
-                var displayForcedText = string.Empty;
+                (bool ForceEnabled, string ForcedText)? displayConfig = null;
                 List<string>? allowedCards = null;
                 List<string>? blockedCards = null;
 
@@ -84,10 +82,10 @@ public sealed class DeviceTelemetryService(
 
                     if (DeviceProtocolParser.TryParseDisplayConfig(
                             line,
-                            out displayForceEnabled,
-                            out displayForcedText))
+                            out var displayForceEnabled,
+                            out var displayForcedText))
                     {
-                        hasDisplayConfig = true;
+                        displayConfig = (displayForceEnabled, displayForcedText);
                         continue;
                     }
 
@@ -113,9 +111,9 @@ public sealed class DeviceTelemetryService(
                         slotCount,
                         slotEnabled,
                         displayTexts,
-                        hasDisplayConfig,
-                        displayForceEnabled,
-                        displayForcedText,
+                        displayConfig is not null,
+                        displayConfig?.ForceEnabled ?? false,
+                        displayConfig?.ForcedText ?? string.Empty,
                         allowedCards,
                         blockedCards);
                     if (configuration is not null)
@@ -140,13 +138,9 @@ public sealed class DeviceTelemetryService(
                 await transportService.SendLineAsync("GET SNAPSHOT", token);
 
                 string? snapshotLine = null;
-                var displayText = string.Empty;
-                var displayForced = false;
-                var hasDisplayState = false;
+                (string Text, bool Forced)? displayState = null;
                 var slots = new Dictionary<int, DeviceSlotSnapshot>();
-                var allowedCount = 0;
-                var blockedCount = 0;
-                var hasCounts = false;
+                (int Allowed, int Blocked)? counts = null;
 
                 var timeoutAt = DateTimeOffset.UtcNow.AddMilliseconds(ProtocolWindowMs);
                 while (DateTimeOffset.UtcNow < timeoutAt)
@@ -163,9 +157,9 @@ public sealed class DeviceTelemetryService(
                         continue;
                     }
 
-                    if (DeviceProtocolParser.TryParseDisplayState(line, out displayText, out displayForced))
+                    if (DeviceProtocolParser.TryParseDisplayState(line, out var displayText, out var displayForced))
                     {
-                        hasDisplayState = true;
+                        displayState = (displayText, displayForced);
                         continue;
                     }
 
@@ -176,21 +170,21 @@ public sealed class DeviceTelemetryService(
                         continue;
                     }
 
-                    if (DeviceProtocolParser.TryParseCounts(line, out allowedCount, out blockedCount))
+                    if (DeviceProtocolParser.TryParseCounts(line, out var allowedCount, out var blockedCount))
                     {
-                        hasCounts = true;
+                        counts = (allowedCount, blockedCount);
                     }
 
                     var snapshot = DeviceProtocolParser.TryBuildSnapshot(
                         snapshotLine,
                         slotCount,
-                        hasDisplayState,
-                        displayText,
-                        displayForced,
+                        displayState is not null,
+                        displayState?.Text ?? string.Empty,
+                        displayState?.Forced ?? false,
                         slots,
-                        hasCounts,
-                        allowedCount,
-                        blockedCount);
+                        counts is not null,
+                        counts?.Allowed ?? 0,
+                        counts?.Blocked ?? 0);
                     if (snapshot is not null)
                     {
                         return snapshot;

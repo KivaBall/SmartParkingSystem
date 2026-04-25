@@ -10,7 +10,10 @@ namespace SmartParkingSystem.Maui.Services.DeviceConnection.Transport;
 
 public sealed class AndroidBluetoothTransportService : IDeviceTransportService
 {
-    private static readonly UUID SerialPortProfileUuid = UUID.FromString("00001101-0000-1000-8000-00805F9B34FB")!;
+    private static readonly UUID SerialPortProfileUuid = UUID.FromString("00001101-0000-1000-8000-00805F9B34FB")
+                                                         ?? throw new InvalidOperationException(
+                                                             "The Bluetooth SPP UUID could not be created.");
+
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
     private readonly StringBuilder _readBuffer = new StringBuilder();
 
@@ -32,11 +35,15 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
         }
 
         var targets = adapter.BondedDevices?
-            .Select(device => new ConnectionTarget(
-                device.Address ?? string.Empty,
-                string.IsNullOrWhiteSpace(device.Name)
-                    ? device.Address ?? string.Empty
-                    : $"{device.Name} ({device.Address})"))
+            .Select(device =>
+            {
+                var address = device.Address ?? string.Empty;
+                var label = string.IsNullOrWhiteSpace(device.Name)
+                    ? address
+                    : $"{device.Name} ({address})";
+
+                return new ConnectionTarget(address, label);
+            })
             .OrderBy(target => target.Label, StringComparer.OrdinalIgnoreCase)
             .Where(target => !string.IsNullOrWhiteSpace(target.Id))
             .ToArray();
@@ -72,7 +79,6 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
             candidateSocket = await TryOpenSocketAsync(
                 device,
                 candidate => candidate.CreateRfcommSocketToServiceRecord(SerialPortProfileUuid),
-                "secure-spp",
                 cancellationToken);
 
             if (candidateSocket is null)
@@ -80,7 +86,6 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
                 candidateSocket = await TryOpenSocketAsync(
                     device,
                     candidate => candidate.CreateInsecureRfcommSocketToServiceRecord(SerialPortProfileUuid),
-                    "insecure-spp",
                     cancellationToken);
             }
 
@@ -108,6 +113,7 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
                 }
                 catch
                 {
+                    // Socket close is best-effort after a failed open attempt.
                 }
 
                 candidateSocket.Dispose();
@@ -135,6 +141,7 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
             }
             catch
             {
+                // Android Bluetooth sockets can already be closed by the platform at this point.
             }
 
             _bluetoothSocket.Dispose();
@@ -225,10 +232,9 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
         }
     }
 
-    private async Task<BluetoothSocket?> TryOpenSocketAsync(
+    private static async Task<BluetoothSocket?> TryOpenSocketAsync(
         BluetoothDevice device,
         Func<BluetoothDevice, BluetoothSocket?> socketFactory,
-        string strategyLabel,
         CancellationToken cancellationToken)
     {
         BluetoothSocket? candidateSocket = null;
@@ -263,7 +269,7 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
         }
     }
 
-    private void CleanupCandidateSocket(BluetoothSocket candidateSocket)
+    private static void CleanupCandidateSocket(BluetoothSocket candidateSocket)
     {
         try
         {
@@ -271,6 +277,7 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
         }
         catch
         {
+            // Socket close is best-effort during fallback cleanup.
         }
 
         candidateSocket.Dispose();

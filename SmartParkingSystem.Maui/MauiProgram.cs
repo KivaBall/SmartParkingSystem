@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using SmartParkingSystem.Maui.Services.Admin;
 using SmartParkingSystem.Maui.Services.BackendSync;
+using SmartParkingSystem.Maui.Services.BackendSync.Commands;
 using SmartParkingSystem.Maui.Services.Dashboard;
 using SmartParkingSystem.Maui.Services.DeviceConnection.Commands;
 using SmartParkingSystem.Maui.Services.DeviceConnection.Connection;
@@ -54,10 +55,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
         builder.Services.AddSingleton<ISettingsPreferencesService, SettingsPreferencesService>();
         builder.Services.AddSingleton(backendSyncOptions);
-        builder.Services.AddSingleton(_ => new HttpClient
-        {
-            BaseAddress = new Uri(backendSyncOptions.ResolveBaseUrl(), UriKind.Absolute)
-        });
+        builder.Services.AddSingleton<IBackendCommandExecutionService, BackendCommandExecutionService>();
         builder.Services.AddSingleton<BackendSyncService>();
         builder.Services.AddScoped<ISettingsService, SettingsService>();
         builder.Services.AddMauiBlazorWebView();

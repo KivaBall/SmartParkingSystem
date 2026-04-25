@@ -40,6 +40,10 @@
                                            OnLanguageChanged="HandleLanguageChangedAsync"
                                            IsExiting="@(!State.IsContentVisible)"/>
                     break;
+                default:
+                    <WorkspaceDashboardView IsExiting="@(!State.IsContentVisible)"
+                                            OnSectionRequested="HandleNavigationAsync"/>
+                    break;
             }
         </div>
     </div>
