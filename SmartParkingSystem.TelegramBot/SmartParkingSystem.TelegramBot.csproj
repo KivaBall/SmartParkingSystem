@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <ItemGroup>
+        <ProjectReference Include="..\SmartParkingSystem.Domain\SmartParkingSystem.Domain.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0"/>
+    </ItemGroup>
+
+    <PropertyGroup>
+        <TargetFrameworks>net10.0;net10.0-windows10.0.19041.0</TargetFrameworks>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UserSecretsId>6e4c3015-3310-4f75-909a-d1b51ff80221</UserSecretsId>
+    </PropertyGroup>
+
+</Project>
