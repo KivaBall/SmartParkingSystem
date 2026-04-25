@@ -7,3 +7,5 @@ riderModule.iml
 *.user
 *.suo
 build-check-*/
+SmartParkingSystem.TelegramBot/data/
+telegram-bot-run*.log
