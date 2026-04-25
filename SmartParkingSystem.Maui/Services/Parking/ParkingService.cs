@@ -11,7 +11,7 @@ public sealed class ParkingService(
 {
     public Task<IReadOnlyList<ParkingSlotSnapshot>> GetSlotsAsync(CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(BuildSlots(sessionService.CurrentSession));
+        return Task.FromResult<IReadOnlyList<ParkingSlotSnapshot>>(BuildSlots(sessionService.CurrentSession));
     }
 
     public async Task<IReadOnlyList<ParkingSlotSnapshot>> ToggleSlotEnabledAsync(
@@ -40,7 +40,7 @@ public sealed class ParkingService(
         return BuildSlots(sessionService.CurrentSession);
     }
 
-    private static IReadOnlyList<ParkingSlotSnapshot> BuildSlots(DeviceControllerSession? session)
+    private static ParkingSlotSnapshot[] BuildSlots(DeviceControllerSession? session)
     {
         if (session is null)
         {

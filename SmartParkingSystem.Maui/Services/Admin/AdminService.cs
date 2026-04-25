@@ -138,7 +138,7 @@ public sealed class AdminService(
         };
     }
 
-    private static IReadOnlyList<string> ParseCards(string cardsText, string fieldName)
+    private static List<string> ParseCards(string cardsText, string fieldName)
     {
         var parsedCards = new List<string>();
         var seenCards = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

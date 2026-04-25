@@ -17,7 +17,7 @@ public sealed class DeviceConnectionService(
 
     public async Task<IReadOnlyList<ConnectionTarget>> GetTargetsAsync()
     {
-        if (!await permissionService.EnsureConnectionPermissionsAsync())
+        if (!await HasConnectionPermissionsAsync())
         {
             return [];
         }
@@ -28,7 +28,7 @@ public sealed class DeviceConnectionService(
 
     public async Task<ConnectionResult> TryAutoConnectAsync()
     {
-        if (!await permissionService.EnsureConnectionPermissionsAsync())
+        if (!await HasConnectionPermissionsAsync())
         {
             return new ConnectionResult(false);
         }
@@ -39,12 +39,7 @@ public sealed class DeviceConnectionService(
 
     public async Task<ConnectionResult> TryConnectAsync(string? targetId)
     {
-        if (string.IsNullOrWhiteSpace(targetId))
-        {
-            return new ConnectionResult(false);
-        }
-
-        if (!await permissionService.EnsureConnectionPermissionsAsync())
+        if (string.IsNullOrWhiteSpace(targetId) || !await HasConnectionPermissionsAsync())
         {
             return new ConnectionResult(false);
         }
@@ -54,13 +49,18 @@ public sealed class DeviceConnectionService(
 
     public async Task<IReadOnlyList<ConnectionTarget>> RefreshTargetsAsync()
     {
-        if (!await permissionService.EnsureConnectionPermissionsAsync())
+        if (!await HasConnectionPermissionsAsync())
         {
             return [];
         }
 
         var targets = await transportService.DiscoverTargetsAsync();
         return RankTargets(targets);
+    }
+
+    private Task<bool> HasConnectionPermissionsAsync()
+    {
+        return permissionService.EnsureConnectionPermissionsAsync();
     }
 
     private static IReadOnlyList<ConnectionTarget> RankTargets(IReadOnlyList<ConnectionTarget> targets)

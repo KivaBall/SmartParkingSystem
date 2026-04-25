@@ -20,7 +20,7 @@ public sealed class EventsService : IEventsService, IDisposable
         ];
 
     private readonly List<EventFeedItem> _events = [];
-    private readonly object _eventsSync = new object();
+    private readonly Lock _eventsSync = new Lock();
     private readonly IDeviceSessionService _sessionService;
     private DeviceControllerSession? _previousSession;
 

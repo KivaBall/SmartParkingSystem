@@ -89,14 +89,6 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
             ? Texts.DisabledDurationLabel
             : Texts.NoOccupiedDurationLabel;
 
-    protected string ToggleButtonLabel => SelectedSlot?.State == ParkingSlotState.Disabled
-        ? Texts.EnableSlotButton
-        : Texts.DisableSlotButton;
-
-    protected string ToggleButtonClass => SelectedSlot?.State == ParkingSlotState.Disabled
-        ? "w-full rounded-md bg-mint-300 px-4 py-4 text-base font-semibold text-calm-900 transition-all duration-[500ms] ease-out hover:bg-mint-200"
-        : "w-full rounded-md bg-warm-100 px-4 py-4 text-base font-semibold text-calm-900 transition-all duration-[500ms] ease-out hover:bg-warm-200";
-
     protected string SelectedSlotBadgeClass => SelectedSlot?.State switch
     {
         ParkingSlotState.Free => "flex h-12 w-12 items-center justify-center rounded-md bg-mint-300 text-calm-900",

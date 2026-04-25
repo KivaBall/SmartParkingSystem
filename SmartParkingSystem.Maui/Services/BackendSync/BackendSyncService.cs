@@ -1,9 +1,10 @@
-using System.Net.Http.Json;
-using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.SignalR.Client;
+using SmartParkingSystem.Domain.Models.BackendCommands;
 using SmartParkingSystem.Domain.Models.BackendSync;
 using SmartParkingSystem.Maui.Services.Admin;
+using SmartParkingSystem.Maui.Services.BackendSync.Commands;
 using SmartParkingSystem.Maui.Services.Dashboard;
 using SmartParkingSystem.Maui.Services.DeviceConnection.Session;
 using SmartParkingSystem.Maui.Services.Events;
@@ -16,28 +17,21 @@ namespace SmartParkingSystem.Maui.Services.BackendSync;
 public sealed class BackendSyncService : IDisposable
 {
     private static readonly TimeSpan PushInterval = TimeSpan.FromSeconds(1);
-    private static readonly JsonSerializerOptions PayloadJsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        Converters = { new JsonStringEnumConverter() }
-    };
-
-    private readonly HttpClient _httpClient;
-    private readonly BackendSyncOptions _options;
+    private readonly IAdminService _adminService;
+    private readonly IBackendCommandExecutionService _commandExecutionService;
+    private readonly SemaphoreSlim _connectGate = new SemaphoreSlim(1, 1);
     private readonly IDashboardService _dashboardService;
-    private readonly IDeviceSessionService _sessionService;
+    private readonly IEventsService _eventsService;
     private readonly IGateService _gateService;
+    private readonly HubConnection _hubConnection;
     private readonly IMonitorService _monitorService;
     private readonly IParkingService _parkingService;
-    private readonly IAdminService _adminService;
-    private readonly IEventsService _eventsService;
-    private readonly ILogger<BackendSyncService> _logger;
-    private readonly CancellationTokenSource _shutdownTokenSource = new();
-    private readonly SemaphoreSlim _pushGate = new(1, 1);
-    private readonly PeriodicTimer _timer = new(PushInterval);
-    private readonly Task _loopTask;
+    private readonly SemaphoreSlim _pushGate = new SemaphoreSlim(1, 1);
+    private readonly IDeviceSessionService _sessionService;
+    private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
+    private readonly PeriodicTimer _timer = new PeriodicTimer(PushInterval);
 
     public BackendSyncService(
-        HttpClient httpClient,
         BackendSyncOptions options,
         IDashboardService dashboardService,
         IDeviceSessionService sessionService,
@@ -46,10 +40,8 @@ public sealed class BackendSyncService : IDisposable
         IParkingService parkingService,
         IAdminService adminService,
         IEventsService eventsService,
-        ILogger<BackendSyncService> logger)
+        IBackendCommandExecutionService commandExecutionService)
     {
-        _httpClient = httpClient;
-        _options = options;
         _dashboardService = dashboardService;
         _sessionService = sessionService;
         _gateService = gateService;
@@ -57,16 +49,62 @@ public sealed class BackendSyncService : IDisposable
         _parkingService = parkingService;
         _adminService = adminService;
         _eventsService = eventsService;
-        _logger = logger;
-        _loopTask = Task.Run(RunLoopAsync);
+        _commandExecutionService = commandExecutionService;
+        _hubConnection = BuildHubConnection(options);
+        _hubConnection.On<BackendCommandRequest>(
+            "ExecuteBackendCommand",
+            async request =>
+            {
+                var result = await _commandExecutionService.ExecuteAsync(
+                    request,
+                    _shutdownTokenSource.Token);
+
+                try
+                {
+                    await _hubConnection.InvokeAsync(
+                        "ReportCommandResult",
+                        result,
+                        _shutdownTokenSource.Token);
+                }
+                catch (Exception)
+                {
+                    // The next state sync keeps the backend in a recoverable state if reporting fails.
+                }
+            });
+        _ = Task.Run(RunLoopAsync);
     }
 
     public void Dispose()
     {
         _shutdownTokenSource.Cancel();
         _timer.Dispose();
+
+        try
+        {
+            _hubConnection.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+        catch (Exception)
+        {
+            // Disposal must stay best-effort because app shutdown can race the SignalR transport.
+        }
+
         _pushGate.Dispose();
+        _connectGate.Dispose();
         _shutdownTokenSource.Dispose();
+    }
+
+    private static HubConnection BuildHubConnection(BackendSyncOptions options)
+    {
+        return new HubConnectionBuilder()
+            .WithUrl(
+                options.ResolveHubUrl(),
+                transportOptions => { transportOptions.Transports = HttpTransportType.LongPolling; })
+            .AddJsonProtocol(protocolOptions =>
+            {
+                protocolOptions.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            })
+            .WithAutomaticReconnect()
+            .Build();
     }
 
     private async Task RunLoopAsync()
@@ -92,36 +130,61 @@ public sealed class BackendSyncService : IDisposable
 
         try
         {
-            var payload = await BuildPayloadAsync(cancellationToken);
-            var response = await _httpClient.PostAsJsonAsync(
-                _options.IngestPath,
-                payload,
-                PayloadJsonOptions,
-                cancellationToken);
-
-            if (response.IsSuccessStatusCode)
+            if (!await EnsureConnectedAsync(cancellationToken))
             {
                 return;
             }
 
-            _logger.LogWarning(
-                "Backend sync failed with status code {StatusCode}",
-                response.StatusCode);
+            var payload = await BuildPayloadAsync(cancellationToken);
+            await _hubConnection.InvokeAsync("PushDeviceState", payload, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            _logger.LogWarning(
-                exception,
-                "Backend sync push failed for {BaseAddress}/{Path}",
-                _httpClient.BaseAddress,
-                _options.IngestPath);
+            // Backend sync is opportunistic; the periodic loop will retry on the next tick.
         }
         finally
         {
             _pushGate.Release();
+        }
+    }
+
+    private async Task<bool> EnsureConnectedAsync(CancellationToken cancellationToken)
+    {
+        if (_hubConnection.State == HubConnectionState.Connected)
+        {
+            return true;
+        }
+
+        await _connectGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (_hubConnection.State == HubConnectionState.Connected)
+            {
+                return true;
+            }
+
+            if (_hubConnection.State is HubConnectionState.Connecting or HubConnectionState.Reconnecting)
+            {
+                return false;
+            }
+
+            await _hubConnection.StartAsync(cancellationToken);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+        finally
+        {
+            _connectGate.Release();
         }
     }
 

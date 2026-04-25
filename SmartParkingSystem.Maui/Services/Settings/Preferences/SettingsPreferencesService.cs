@@ -42,15 +42,15 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
             return false;
         }
 
-        if (!double.TryParse(parts[0], CultureInfo.InvariantCulture, out leftPercent)
-            || !double.TryParse(parts[1], CultureInfo.InvariantCulture, out topPercent))
+        if (double.TryParse(parts[0], CultureInfo.InvariantCulture, out leftPercent)
+            && double.TryParse(parts[1], CultureInfo.InvariantCulture, out topPercent))
         {
-            leftPercent = 0;
-            topPercent = 0;
-            return false;
+            return true;
         }
 
-        return true;
+        leftPercent = 0;
+        topPercent = 0;
+        return false;
     }
 
     public void SetParkingSlotPosition(string slotId, double leftPercent, double topPercent)
