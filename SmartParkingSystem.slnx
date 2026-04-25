@@ -1,3 +1,5 @@
 <Solution>
-    <Project Path="SmartParkingSystem/SmartParkingSystem.csproj"/>
+    <Project Path="SmartParkingSystem.Domain/SmartParkingSystem.Domain.csproj"/>
+    <Project Path="SmartParkingSystem.TelegramBot/SmartParkingSystem.TelegramBot.csproj"/>
+    <Project Path="SmartParkingSystem.Maui/SmartParkingSystem.Maui.csproj"/>
 </Solution>
