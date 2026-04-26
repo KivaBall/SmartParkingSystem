@@ -77,6 +77,7 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 - `p-8`
 - `p-10`
 - `px-4`
+- `px-2`
 - `py-2`
 - `py-3`
 - `py-4`
@@ -94,9 +95,12 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 
 - `flex`
 - `grid`
+- `grid-cols-3`
 - `inline-flex`
 - `flex-col`
 - `flex-1`
+- `min-w-0`
+- `shrink-0`
 - `items-center`
 - `items-end`
 - `justify-center`
@@ -133,6 +137,7 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 - `sm:w-14`
 - `sm:p-8`
 - `sm:p-10`
+- `sm:px-4`
 - `sm:px-6`
 - `sm:text-6xl`
 - `sm:text-lg`
