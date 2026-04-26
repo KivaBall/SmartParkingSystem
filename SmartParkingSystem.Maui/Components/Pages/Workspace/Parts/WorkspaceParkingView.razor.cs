@@ -91,11 +91,14 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
 
     protected string SelectedSlotBadgeClass => SelectedSlot?.State switch
     {
-        ParkingSlotState.Free => "flex h-12 w-12 items-center justify-center rounded-md bg-mint-300 text-calm-900",
-        ParkingSlotState.Occupied => "flex h-12 w-12 items-center justify-center rounded-md bg-brand-300 text-white",
-        ParkingSlotState.Disabled => "flex h-12 w-12 items-center justify-center rounded-md bg-warm-100 text-calm-900",
-        _ => "flex h-12 w-12 items-center justify-center rounded-md bg-white/85 text-calm-900"
+        ParkingSlotState.Free => "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-mint-300 text-calm-900",
+        ParkingSlotState.Occupied => "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-brand-300 text-white",
+        ParkingSlotState.Disabled => "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-warm-100 text-calm-900",
+        _ => "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-white/85 text-calm-900"
     };
+
+    protected static string MarkerSizeStyle => "width: 100%; aspect-ratio: 1 / 1;";
+    protected static string MarkerLabelStyle => "font-size: 0.75rem; font-size: 32cqw; line-height: 1;";
 
     protected string SelectedSlotIcon => SelectedSlot?.State == ParkingSlotState.Free
         ? "square-parking"
@@ -200,7 +203,7 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
         };
 
         var selectedClass = slot.Id == SelectedSlotId ? "scale-105" : "scale-100";
-        return $"flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-md {colorClass} {selectedClass
+        return $"flex flex-col items-center justify-center gap-1 rounded-md {colorClass} {selectedClass
         } transition-all duration-[500ms] ease-out";
     }
 
@@ -215,8 +218,8 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
     {
         var draft = DraftPositions.GetValueOrDefault(slot.Id) ??
                     BuildInitialDraft(slot.Id);
-        return $"position: absolute; left: {draft.LeftPercent:F1}%; top: {draft.TopPercent
-            :F1}%; transform: translate(-50%, -50%);";
+        return $"container-type: inline-size; position: absolute; left: {draft.LeftPercent:F1}%; top: {draft.TopPercent
+            :F1}%; width: 8%; transform: translate(-50%, -50%);";
     }
 
     private async Task RefreshSlotsAsync()

@@ -1,6 +1,16 @@
 @namespace SmartParkingSystem.Maui.Components.Pages.Workspace.Parts
 @inherits WorkspaceAdminViewBase
 
+<style>
+    @@media (min-width: 768px) {
+        .workspace-admin-actions {
+            position: sticky;
+            top: 8.25rem;
+            z-index: 20;
+        }
+    }
+</style>
+
 <div class="space-y-4">
     @if (IsLoading)
     {
@@ -19,22 +29,22 @@
                     </p>
                 </div>
 
-                <div class="flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-end">
-                    <button class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-mint-300 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-mint-200 disabled:cursor-default disabled:opacity-50"
+                <div class="grid grid-cols-3 gap-3">
+                    <button class="inline-flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-md bg-mint-300 px-2 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-mint-200 disabled:cursor-default disabled:opacity-50 sm:px-4"
                             disabled="@IsBusy"
                             @onclick="RefreshAsync">
                         <i data-lucide="refresh-cw"></i>
                         <span>@Texts.RefreshButton</span>
                     </button>
 
-                    <button class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-brand-300 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-brand-400 disabled:cursor-default disabled:opacity-50"
+                    <button class="inline-flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-md bg-brand-300 px-2 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-brand-400 disabled:cursor-default disabled:opacity-50 sm:px-4"
                             disabled="@(!HasChanges || IsBusy)"
                             @onclick="SaveAsync">
                         <i data-lucide="save"></i>
                         <span>@Texts.SaveButton</span>
                     </button>
 
-                    <button class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-warm-300 px-4 py-3 text-sm font-semibold text-warm-700 transition-all duration-500 ease-out hover:bg-warm-200 disabled:cursor-default disabled:opacity-50"
+                    <button class="inline-flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-md bg-warm-300 px-2 py-3 text-sm font-semibold text-warm-700 transition-all duration-500 ease-out hover:bg-warm-200 disabled:cursor-default disabled:opacity-50 sm:px-4"
                             disabled="@IsBusy"
                             @onclick="ResetAsync">
                         <i data-lucide="rotate-ccw"></i>

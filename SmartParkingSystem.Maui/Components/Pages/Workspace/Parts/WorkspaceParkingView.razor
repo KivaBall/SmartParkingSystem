@@ -21,34 +21,37 @@ else
             </div>
 
             <div class="min-h-[12.5rem] rounded-md bg-white/85 px-4 py-4 text-calm-700">
-                <div style="position: relative; width: 100%; height: 100%; min-height: 20rem;">
-                    <svg width="429"
-                         height="273"
-                         viewBox="-10 -10 449 293"
-                         fill="none"
-                         xmlns="http://www.w3.org/2000/svg"
-                         class="h-full w-full p-6">
-                        <path d="M181.5 58.6062H0.5V221.606H181.5L364.5 271.606L428 128.788L364.5 0.606186L181.5 58.6062Z"
-                              stroke="#11414D"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"/>
-                    </svg>
+                <div style="position: relative; width: 100%; aspect-ratio: 449 / 293; min-height: 12.5rem;">
+                    <div style="position: absolute; inset: 1rem;">
+                        <svg width="429"
+                             height="273"
+                             viewBox="-10 -10 449 293"
+                             fill="none"
+                             xmlns="http://www.w3.org/2000/svg"
+                             style="position: absolute; inset: 0; width: 100%; height: 100%;">
+                            <path d="M181.5 58.6062H0.5V221.606H181.5L364.5 271.606L428 128.788L364.5 0.606186L181.5 58.6062Z"
+                                  stroke="#11414D"
+                                  stroke-width="2"
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"/>
+                        </svg>
 
-                    @foreach (var slot in VisibleSlots)
-                    {
-                        <div style="@GetSlotPositionStyle(slot)">
-                            <div class="flex flex-col items-center gap-2">
-                                <button class="@GetMarkerClass(slot)"
-                                        type="button"
-                                        @onclick="@(() => SelectSlot(slot.Id))">
-                                    <i data-lucide="@GetMarkerIcon(slot)" class="h-12 w-12"></i>
-                                </button>
+                        @foreach (var slot in VisibleSlots)
+                        {
+                            <div style="@GetSlotPositionStyle(slot)">
+                                <div class="flex flex-col items-center gap-2">
+                                    <button class="@GetMarkerClass(slot)"
+                                            style="@MarkerSizeStyle"
+                                            type="button"
+                                            @onclick="@(() => SelectSlot(slot.Id))">
+                                        <i data-lucide="@GetMarkerIcon(slot)" style="width: 62%; height: 62%;"></i>
+                                    </button>
 
-                                <span class="text-sm font-semibold text-calm-900">@slot.Label</span>
+                                    <span class="font-semibold text-calm-900" style="@MarkerLabelStyle">@slot.Label</span>
+                                </div>
                             </div>
-                        </div>
-                    }
+                        }
+                    </div>
                 </div>
             </div>
         </article>
@@ -56,7 +59,7 @@ else
         @if (SelectedSlot is not null)
         {
             <article class="@DetailsClass" style="@DetailsStyle">
-                <div class="flex items-stretch gap-4">
+                <div class="flex flex-col items-stretch gap-4 sm:flex-row">
                     <div class="flex-1 rounded-md bg-white/90 p-5 text-calm-900">
                         <div class="flex h-full flex-col justify-center">
                             <div class="mb-4 flex items-center justify-center gap-3">

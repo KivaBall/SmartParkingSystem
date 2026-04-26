@@ -67,10 +67,10 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
     protected static string EditableClass => string.Empty;
 
     protected string ActionsClass => IsExiting
-        ? "animate-exit-bottom rounded-md bg-warm-100 p-6"
-        : "animate-page-enter-bottom rounded-md bg-warm-100 p-6 opacity-0";
+        ? "workspace-admin-actions animate-exit-bottom rounded-md bg-warm-100 p-6"
+        : "workspace-admin-actions animate-page-enter-bottom rounded-md bg-warm-100 p-6 opacity-0";
 
-    protected static string ActionsStyle => "animation-delay: 0ms; position: sticky; top: 8.25rem; z-index: 20;";
+    protected static string ActionsStyle => "animation-delay: 0ms;";
     protected static string EditableStyle => string.Empty;
 
     protected string GateSectionClass => IsExiting
