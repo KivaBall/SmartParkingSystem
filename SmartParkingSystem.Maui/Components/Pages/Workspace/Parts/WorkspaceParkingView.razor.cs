@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using SmartParkingSystem.Domain.Models.DeviceConnection;
 using SmartParkingSystem.Domain.Models.Localization;
 using SmartParkingSystem.Domain.Models.Parking;
@@ -11,9 +12,12 @@ namespace SmartParkingSystem.Maui.Components.Pages.Workspace.Parts;
 
 public class WorkspaceParkingViewBase : ComponentBase, IDisposable
 {
+    private const int MaxFloor = 2;
+    private const int MinFloor = 1;
     private const double PositionStep = 2;
     private const double DefaultCenterLeftPercent = 50;
     private const double DefaultCenterTopPercent = 50;
+    private const int FloorTransitionMs = 250;
     private const double MinLeftPercent = 2;
     private const double MaxLeftPercent = 98;
     private const double MinTopPercent = 2;
@@ -42,26 +46,41 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
     [Inject]
     protected IDeviceSessionService? DeviceSessionService { get; set; }
 
+    [Inject]
+    protected IJSRuntime? JsRuntime { get; set; }
+
     [Parameter]
     public bool IsExiting { get; set; }
 
     protected IReadOnlyList<ParkingSlotSnapshot> Slots { get; private set; } = [];
     protected bool IsLoading { get; private set; } = true;
     protected bool IsBusy { get; private set; }
+    protected int ActiveFloor { get; private set; } = MinFloor;
+    protected bool IsFloorContentVisible { get; private set; } = true;
     protected string SelectedSlotId { get; private set; } = "P1";
     protected Dictionary<string, ParkingPositionDraft> DraftPositions { get; } = [];
+    private bool NeedsIconRefresh { get; set; } = true;
     private string? LastParkingStateFingerprint { get; set; }
     private bool IsReloading { get; set; }
 
     protected ParkingTexts Texts => RequireLocalizationService().GetParkingTexts();
     protected bool EditParkingEnabled => RequireSettingsPreferencesService().EditParkingEnabled;
 
-    protected IReadOnlyList<ParkingSlotSnapshot> VisibleSlots => !EditParkingEnabled
-        ? [.. Slots.Where(slot => slot.State != ParkingSlotState.Disabled)]
-        : Slots;
+    protected IReadOnlyList<ParkingSlotSnapshot> VisibleSlots =>
+    [
+        .. Slots.Where(slot => slot.Floor == ActiveFloor && (EditParkingEnabled || slot.State != ParkingSlotState.Disabled))
+    ];
 
-    protected ParkingSlotSnapshot? SelectedSlot => VisibleSlots.FirstOrDefault(slot => slot.Id == SelectedSlotId);
+    protected ParkingSlotSnapshot? SelectedSlot => Slots.FirstOrDefault(slot => slot.Id == SelectedSlotId);
     protected ParkingPositionDraft? SelectedDraft => DraftPositions.GetValueOrDefault(SelectedSlotId);
+    protected bool CanMoveToPreviousFloor => ActiveFloor > MinFloor;
+    protected bool CanMoveToNextFloor => ActiveFloor < MaxFloor;
+    protected bool CanRaiseSelectedSlot => !IsBusy && SelectedSlot is { Floor: < MaxFloor };
+    protected bool CanLowerSelectedSlot => !IsBusy && SelectedSlot is { Floor: > MinFloor };
+    protected string FloorLayerStyle => IsFloorContentVisible ? "opacity: 1;" : "opacity: 0;";
+    protected string ParkingMapImagePath => ActiveFloor == MinFloor
+        ? "assets/parking-shape-first.svg"
+        : "assets/parking-shape-second.svg";
 
     protected string MapClass => IsExiting
         ? "animate-exit-bottom rounded-md bg-brand-100/80 p-6"
@@ -126,9 +145,39 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
         await RefreshSlotsAsync();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender || NeedsIconRefresh)
+        {
+            NeedsIconRefresh = false;
+            await RequireJsRuntime().InvokeVoidAsync("initializeLucideIcons");
+        }
+    }
+
     protected void SelectSlot(string slotId)
     {
         SelectedSlotId = slotId;
+        NeedsIconRefresh = true;
+    }
+
+    protected Task ShowPreviousFloor()
+    {
+        if (!CanMoveToPreviousFloor)
+        {
+            return Task.CompletedTask;
+        }
+
+        return SwitchFloorAsync(ActiveFloor - 1);
+    }
+
+    protected Task ShowNextFloor()
+    {
+        if (!CanMoveToNextFloor)
+        {
+            return Task.CompletedTask;
+        }
+
+        return SwitchFloorAsync(ActiveFloor + 1);
     }
 
     protected async Task ToggleSelectedSlotAsync()
@@ -145,6 +194,7 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
             Slots = await RequireParkingService().ToggleSlotEnabledAsync(SelectedSlot.Id);
             LastParkingStateFingerprint = BuildParkingStateFingerprint(RequireDeviceSessionService().CurrentSession);
             SyncDrafts();
+            NeedsIconRefresh = true;
         }
         finally
         {
@@ -189,7 +239,22 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
                 SelectedDraft.LeftPercent,
                 SelectedDraft.TopPercent);
 
+        NeedsIconRefresh = true;
         return InvokeAsync(StateHasChanged);
+    }
+
+    protected Task RaiseSelectedSlotAsync()
+    {
+        return SelectedSlot is null
+            ? Task.CompletedTask
+            : MoveSelectedSlotToFloorAsync(SelectedSlot.Floor + 1);
+    }
+
+    protected Task LowerSelectedSlotAsync()
+    {
+        return SelectedSlot is null
+            ? Task.CompletedTask
+            : MoveSelectedSlotToFloorAsync(SelectedSlot.Floor - 1);
     }
 
     protected string GetMarkerClass(ParkingSlotSnapshot slot)
@@ -237,9 +302,9 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
             IsLoading = false;
             SyncDrafts();
 
-            if (VisibleSlots.All(slot => slot.Id != SelectedSlotId))
+            if (Slots.All(slot => slot.Id != SelectedSlotId))
             {
-                SelectedSlotId = VisibleSlots.FirstOrDefault()?.Id ?? "P1";
+                SelectFirstAvailableSlot();
             }
         }
         finally
@@ -264,6 +329,58 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
                 SelectedDraft.TopPercent);
 
         return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task MoveSelectedSlotToFloorAsync(int floor)
+    {
+        if (SelectedSlot is null || IsBusy || floor is < MinFloor or > MaxFloor || floor == SelectedSlot.Floor)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        IsFloorContentVisible = false;
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(FloorTransitionMs);
+
+        try
+        {
+            RequireSettingsPreferencesService().SetParkingSlotFloor(SelectedSlot.Id, floor);
+            ActiveFloor = floor;
+            Slots = await RequireParkingService().GetSlotsAsync();
+            NeedsIconRefresh = true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        IsFloorContentVisible = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SwitchFloorAsync(int floor)
+    {
+        if (floor is < MinFloor or > MaxFloor || floor == ActiveFloor)
+        {
+            return;
+        }
+
+        IsFloorContentVisible = false;
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(FloorTransitionMs);
+
+        ActiveFloor = floor;
+        NeedsIconRefresh = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        IsFloorContentVisible = true;
+        NeedsIconRefresh = true;
+        await InvokeAsync(StateHasChanged);
     }
 
     private void SyncDrafts()
@@ -292,6 +409,18 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
         {
             DraftPositions.Remove(draftSlotId);
         }
+    }
+
+    private void SelectFirstAvailableSlot()
+    {
+        if (Slots.Any(slot => slot.Id == SelectedSlotId))
+        {
+            NeedsIconRefresh = true;
+            return;
+        }
+
+        SelectedSlotId = Slots.FirstOrDefault()?.Id ?? "P1";
+        NeedsIconRefresh = true;
     }
 
     private static string FormatDuration(TimeSpan duration)
@@ -387,6 +516,11 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
         return DeviceSessionService ?? throw new InvalidOperationException("Device session service is not available.");
     }
 
+    private IJSRuntime RequireJsRuntime()
+    {
+        return JsRuntime ?? throw new InvalidOperationException("JavaScript runtime is not available.");
+    }
+
     private ISettingsPreferencesService RequireSettingsPreferencesService()
     {
         return SettingsPreferencesService ??
@@ -409,13 +543,20 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
         _ = InvokeAsync(async () =>
         {
             await RefreshSlotsAsync();
+            NeedsIconRefresh = true;
             StateHasChanged();
         });
     }
 
     private void OnPreferencesChanged()
     {
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () =>
+        {
+            Slots = await RequireParkingService().GetSlotsAsync();
+            SelectFirstAvailableSlot();
+            NeedsIconRefresh = true;
+            StateHasChanged();
+        });
     }
 
     protected sealed class ParkingPositionDraft

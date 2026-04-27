@@ -210,7 +210,7 @@ public sealed class TelegramMenuService
             rows.Add(
             [
                 new TelegramInlineKeyboardButton(
-                    $"{GetParkingSlotEmoji(slot.State)} {slot.Label} · {LocalizeParkingSlotState(slot.State, language)
+                    $"{GetParkingSlotEmoji(slot.State)} {slot.Label} · {LocalizeParkingSlotFloor(slot.Floor, language)} · {LocalizeParkingSlotState(slot.State, language)
                     }",
                     $"cmd:parking:toggle:{slot.Id}")
             ]);
@@ -680,5 +680,13 @@ public sealed class TelegramMenuService
             ParkingSlotState.Disabled => Localize(language, "вимкнене", "disabled"),
             _ => state.ToString()
         };
+    }
+
+    private static string LocalizeParkingSlotFloor(int floor, TelegramChatLanguage language)
+    {
+        var normalizedFloor = Math.Clamp(floor, 1, 2);
+        return language == TelegramChatLanguage.Ukrainian
+            ? $"поверх {normalizedFloor}"
+            : $"floor {normalizedFloor}";
     }
 }
