@@ -2,12 +2,14 @@ using SmartParkingSystem.Domain.Models.DeviceConnection;
 using SmartParkingSystem.Domain.Models.Parking;
 using SmartParkingSystem.Maui.Services.DeviceConnection.Commands;
 using SmartParkingSystem.Maui.Services.DeviceConnection.Session;
+using SmartParkingSystem.Maui.Services.Settings.Preferences;
 
 namespace SmartParkingSystem.Maui.Services.Parking;
 
 public sealed class ParkingService(
     IDeviceSessionService sessionService,
-    IDeviceCommandService commandService) : IParkingService
+    IDeviceCommandService commandService,
+    ISettingsPreferencesService settingsPreferencesService) : IParkingService
 {
     public Task<IReadOnlyList<ParkingSlotSnapshot>> GetSlotsAsync(CancellationToken cancellationToken = default)
     {
@@ -40,7 +42,7 @@ public sealed class ParkingService(
         return BuildSlots(sessionService.CurrentSession);
     }
 
-    private static ParkingSlotSnapshot[] BuildSlots(DeviceControllerSession? session)
+    private ParkingSlotSnapshot[] BuildSlots(DeviceControllerSession? session)
     {
         if (session is null)
         {
@@ -83,7 +85,8 @@ public sealed class ParkingService(
                 $"P{slotNumber}",
                 $"P{slotNumber}",
                 state,
-                occupiedDuration);
+                occupiedDuration,
+                settingsPreferencesService.GetParkingSlotFloor($"P{slotNumber}"));
         }
 
         return slots;

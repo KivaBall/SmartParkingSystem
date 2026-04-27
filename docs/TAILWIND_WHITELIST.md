@@ -21,6 +21,7 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 - `bg-brand-100/70`
 - `bg-brand-100/80`
 - `bg-brand-100/60`
+- `bg-brand-100`
 - `bg-brand-200`
 - `bg-brand-300`
 - `bg-brand-400`

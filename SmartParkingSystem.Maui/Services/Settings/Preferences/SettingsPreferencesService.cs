@@ -4,6 +4,9 @@ namespace SmartParkingSystem.Maui.Services.Settings.Preferences;
 
 public sealed class SettingsPreferencesService : ISettingsPreferencesService
 {
+    private const int DefaultParkingSlotFloor = 1;
+    private const int MaxParkingSlotFloor = 2;
+    private const int MinParkingSlotFloor = 1;
     private const string EditParkingEnabledKey = "workspace.edit-parking-enabled";
     public event Action? PreferencesChanged;
 
@@ -67,8 +70,36 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
         PreferencesChanged?.Invoke();
     }
 
+    public int GetParkingSlotFloor(string slotId)
+    {
+        var value = Microsoft.Maui.Storage.Preferences.Default.Get(
+            GetParkingSlotFloorKey(slotId),
+            DefaultParkingSlotFloor);
+
+        return Math.Clamp(value, MinParkingSlotFloor, MaxParkingSlotFloor);
+    }
+
+    public void SetParkingSlotFloor(string slotId, int floor)
+    {
+        var normalizedFloor = Math.Clamp(floor, MinParkingSlotFloor, MaxParkingSlotFloor);
+        var key = GetParkingSlotFloorKey(slotId);
+        var currentValue = Microsoft.Maui.Storage.Preferences.Default.Get(key, DefaultParkingSlotFloor);
+        if (currentValue == normalizedFloor)
+        {
+            return;
+        }
+
+        Microsoft.Maui.Storage.Preferences.Default.Set(key, normalizedFloor);
+        PreferencesChanged?.Invoke();
+    }
+
     private static string GetParkingSlotPositionKey(string slotId)
     {
         return $"parking.slot-position.{slotId}";
+    }
+
+    private static string GetParkingSlotFloorKey(string slotId)
+    {
+        return $"parking.slot-floor.{slotId}";
     }
 }

@@ -4,4 +4,5 @@ public sealed record ParkingSlotSnapshot(
     string Id,
     string Label,
     ParkingSlotState State,
-    TimeSpan? OccupiedDuration);
+    TimeSpan? OccupiedDuration,
+    int Floor = 1);
