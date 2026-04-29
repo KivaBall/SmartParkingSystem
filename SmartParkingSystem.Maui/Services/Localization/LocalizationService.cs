@@ -1,12 +1,18 @@
 using SmartParkingSystem.Domain.Models.Localization;
+using SmartParkingSystem.Maui.Services.AppMemory;
 
 namespace SmartParkingSystem.Maui.Services.Localization;
 
 public sealed class LocalizationService : ILocalizationService
 {
-    private const string LanguagePreferenceKey = "app.language";
+    private readonly IAppMemoryStore _memoryStore;
+    private AppLanguage _currentLanguage;
 
-    private AppLanguage _currentLanguage = LoadLanguage();
+    public LocalizationService(IAppMemoryStore memoryStore)
+    {
+        _memoryStore = memoryStore;
+        _currentLanguage = memoryStore.GetLanguage(AppLanguage.English);
+    }
 
     public event Action? LanguageChanged;
 
@@ -21,7 +27,7 @@ public sealed class LocalizationService : ILocalizationService
             }
 
             _currentLanguage = value;
-            Preferences.Default.Set(LanguagePreferenceKey, value.ToString());
+            _memoryStore.SetLanguage(value);
             LanguageChanged?.Invoke();
         }
     }
@@ -69,13 +75,5 @@ public sealed class LocalizationService : ILocalizationService
     public EventsTexts GetEventsTexts()
     {
         return LocalizationTextCatalog.GetEventsTexts(CurrentLanguage);
-    }
-
-    private static AppLanguage LoadLanguage()
-    {
-        var storedValue = Preferences.Default.Get(LanguagePreferenceKey, nameof(AppLanguage.English));
-        return Enum.TryParse<AppLanguage>(storedValue, true, out var parsedValue)
-            ? parsedValue
-            : AppLanguage.English;
     }
 }

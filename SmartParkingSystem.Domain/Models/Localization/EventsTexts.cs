@@ -12,7 +12,7 @@ public sealed record EventsTexts(
     string SystemFilterLabel,
     string EmptyStateTitle,
     string EmptyStateDescription,
-    string LastTwoMinutesLabel,
+    string RecentEventsLabel,
     string ControllerConnectedTitle,
     string ControllerDisconnectedTitle,
     string GateStateChangedTitle,
