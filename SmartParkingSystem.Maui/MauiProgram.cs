@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using SmartParkingSystem.Maui.Services.Admin;
 using SmartParkingSystem.Maui.Services.BackendSync;
 using SmartParkingSystem.Maui.Services.BackendSync.Commands;
+using SmartParkingSystem.Maui.Services.Camera;
 using SmartParkingSystem.Maui.Services.Dashboard;
 using SmartParkingSystem.Maui.Services.DeviceConnection.Commands;
 using SmartParkingSystem.Maui.Services.DeviceConnection.Connection;
@@ -49,6 +50,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<IDashboardService, DashboardService>();
         builder.Services.AddSingleton<IMonitorService, MonitorService>();
         builder.Services.AddSingleton<IEventsService, EventsService>();
+        builder.Services.AddSingleton<ICameraSnapshotService, CameraSnapshotService>();
+        builder.Services.AddScoped<IEntryCameraService, EntryCameraService>();
         builder.Services.AddSingleton<IAdminService, AdminService>();
         builder.Services.AddSingleton<IGateService, GateService>();
         builder.Services.AddSingleton<IParkingService, ParkingService>();

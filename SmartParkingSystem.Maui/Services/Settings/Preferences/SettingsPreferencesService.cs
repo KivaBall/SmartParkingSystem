@@ -4,10 +4,16 @@ namespace SmartParkingSystem.Maui.Services.Settings.Preferences;
 
 public sealed class SettingsPreferencesService : ISettingsPreferencesService
 {
+    private const int DefaultCameraAutoSnapshotDelayMs = 2000;
+    private const int MaxCameraAutoSnapshotDelayMs = 30000;
+    private const int MinCameraAutoSnapshotDelayMs = 250;
     private const int DefaultParkingSlotFloor = 1;
     private const int MaxParkingSlotFloor = 2;
     private const int MinParkingSlotFloor = 1;
+    private const string CameraAutoSnapshotDelayMsKey = "camera.auto-snapshot-delay-ms";
+    private const string CameraAutoSnapshotEnabledKey = "camera.auto-snapshot-enabled";
     private const string EditParkingEnabledKey = "workspace.edit-parking-enabled";
+    private const string KeepCameraEnabledOutsideGateKey = "camera.keep-enabled-outside-gate";
     public event Action? PreferencesChanged;
 
     public bool EditParkingEnabled
@@ -24,6 +30,34 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
             Microsoft.Maui.Storage.Preferences.Default.Set(EditParkingEnabledKey, value);
             PreferencesChanged?.Invoke();
         }
+    }
+
+    public bool CameraAutoSnapshotEnabled
+    {
+        get => Microsoft.Maui.Storage.Preferences.Default.Get(CameraAutoSnapshotEnabledKey, false);
+        set => SetPreference(CameraAutoSnapshotEnabledKey, value, false);
+    }
+
+    public int CameraAutoSnapshotDelayMs
+    {
+        get
+        {
+            var value = Microsoft.Maui.Storage.Preferences.Default.Get(
+                CameraAutoSnapshotDelayMsKey,
+                DefaultCameraAutoSnapshotDelayMs);
+
+            return Math.Clamp(value, MinCameraAutoSnapshotDelayMs, MaxCameraAutoSnapshotDelayMs);
+        }
+        set => SetPreference(
+            CameraAutoSnapshotDelayMsKey,
+            Math.Clamp(value, MinCameraAutoSnapshotDelayMs, MaxCameraAutoSnapshotDelayMs),
+            DefaultCameraAutoSnapshotDelayMs);
+    }
+
+    public bool KeepCameraEnabledOutsideGate
+    {
+        get => Microsoft.Maui.Storage.Preferences.Default.Get(KeepCameraEnabledOutsideGateKey, false);
+        set => SetPreference(KeepCameraEnabledOutsideGateKey, value, false);
     }
 
     public bool TryGetParkingSlotPosition(string slotId, out double leftPercent, out double topPercent)
@@ -101,5 +135,29 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
     private static string GetParkingSlotFloorKey(string slotId)
     {
         return $"parking.slot-floor.{slotId}";
+    }
+
+    private void SetPreference(string key, bool value, bool defaultValue)
+    {
+        var currentValue = Microsoft.Maui.Storage.Preferences.Default.Get(key, defaultValue);
+        if (currentValue == value)
+        {
+            return;
+        }
+
+        Microsoft.Maui.Storage.Preferences.Default.Set(key, value);
+        PreferencesChanged?.Invoke();
+    }
+
+    private void SetPreference(string key, int value, int defaultValue)
+    {
+        var currentValue = Microsoft.Maui.Storage.Preferences.Default.Get(key, defaultValue);
+        if (currentValue == value)
+        {
+            return;
+        }
+
+        Microsoft.Maui.Storage.Preferences.Default.Set(key, value);
+        PreferencesChanged?.Invoke();
     }
 }

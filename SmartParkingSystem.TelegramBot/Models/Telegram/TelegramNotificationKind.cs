@@ -4,6 +4,7 @@ public enum TelegramNotificationKind
 {
     Gate,
     Parking,
+    Camera,
     Monitor,
     Admin,
     Connection

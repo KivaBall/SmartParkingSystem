@@ -7,6 +7,7 @@ using SmartParkingSystem.TelegramBot.Services.Storage;
 using SmartParkingSystem.TelegramBot.Services.Telegram;
 
 var builder = WebApplication.CreateBuilder(args);
+const long deviceStateHubMaximumReceiveBytes = 1024 * 1024;
 
 builder.Services.AddOptions<TelegramBotOptions>()
     .Bind(builder.Configuration.GetSection(TelegramBotOptions.SectionName));
@@ -38,7 +39,7 @@ builder.Services.AddCors(cors =>
                 .AllowCredentials();
         });
 });
-builder.Services.AddSignalR()
+builder.Services.AddSignalR(options => { options.MaximumReceiveMessageSize = deviceStateHubMaximumReceiveBytes; })
     .AddJsonProtocol(options => { options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()); });
 builder.Services.AddHttpClient(TelegramBotApiClient.HttpClientName);
 builder.Services.AddSingleton<ConnectedDeviceHostRegistry>();

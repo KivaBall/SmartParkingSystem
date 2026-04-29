@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using SmartParkingSystem.Domain.Models.Localization;
 using SmartParkingSystem.Domain.Models.Navigation;
+using SmartParkingSystem.Maui.Services.Camera;
 using SmartParkingSystem.Maui.Services.Localization;
 
 namespace SmartParkingSystem.Maui.Components.Pages.Workspace;
@@ -16,6 +17,9 @@ public class WorkspacePageBase : ComponentBase, IDisposable
 
     [Inject]
     protected ILocalizationService? LocalizationService { get; set; }
+
+    [Inject]
+    protected IEntryCameraService? EntryCameraService { get; set; }
 
     protected WorkspacePageState State { get; } = new WorkspacePageState();
 
@@ -72,6 +76,7 @@ public class WorkspacePageBase : ComponentBase, IDisposable
     protected override void OnInitialized()
     {
         RequireLocalizationService().LanguageChanged += OnLanguageChanged;
+        _ = RequireEntryCameraService();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -183,6 +188,11 @@ public class WorkspacePageBase : ComponentBase, IDisposable
     private ILocalizationService RequireLocalizationService()
     {
         return LocalizationService ?? throw new InvalidOperationException("Localization service is not available.");
+    }
+
+    private IEntryCameraService RequireEntryCameraService()
+    {
+        return EntryCameraService ?? throw new InvalidOperationException("Entry camera service is not available.");
     }
 
     private void OnLanguageChanged()

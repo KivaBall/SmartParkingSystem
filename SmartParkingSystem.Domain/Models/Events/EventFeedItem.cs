@@ -7,4 +7,5 @@ public sealed record EventFeedItem(
     string? Subject,
     string? PreviousValue,
     string? CurrentValue,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? AttachmentDataUrl = null);

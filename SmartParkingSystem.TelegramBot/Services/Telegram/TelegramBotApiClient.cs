@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using SmartParkingSystem.TelegramBot.Configuration;
@@ -72,6 +73,45 @@ public sealed class TelegramBotApiClient(
             "sendMessage",
             cancellationToken,
             payload);
+    }
+
+    public async Task<TelegramApiEnvelope<TelegramSentMessage>?> SendPhotoAsync(
+        long chatId,
+        byte[] photoBytes,
+        string fileName,
+        string? caption,
+        CancellationToken cancellationToken,
+        string? parseMode = null)
+    {
+        var token = options.Value.BotToken.Trim();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return default;
+        }
+
+        var client = httpClientFactory.CreateClient(HttpClientName);
+        var requestUri = $"https://api.telegram.org/bot{token}/sendPhoto";
+
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(chatId.ToString()), "chat_id");
+
+        if (!string.IsNullOrWhiteSpace(caption))
+        {
+            content.Add(new StringContent(caption), "caption");
+        }
+
+        if (!string.IsNullOrWhiteSpace(parseMode))
+        {
+            content.Add(new StringContent(parseMode), "parse_mode");
+        }
+
+        var photoContent = new ByteArrayContent(photoBytes);
+        photoContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        content.Add(photoContent, "photo", fileName);
+
+        using var response = await client.PostAsync(requestUri, content, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<TelegramApiEnvelope<TelegramSentMessage>>(cancellationToken);
     }
 
     public async Task EditMessageTextAsync(

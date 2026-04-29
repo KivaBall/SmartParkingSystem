@@ -24,6 +24,7 @@ public class WorkspaceEventsViewBase : ComponentBase, IDisposable
 
     protected string SearchText { get; set; } = string.Empty;
     protected EventCategory? SelectedCategory { get; private set; }
+    protected string? SelectedCameraImageSource { get; private set; }
     protected EventsTexts Texts => RequireLocalizationService().GetEventsTexts();
 
     protected string FiltersClass => IsExiting
@@ -43,6 +44,7 @@ public class WorkspaceEventsViewBase : ComponentBase, IDisposable
         (Texts.ConnectionFilterLabel, EventCategory.Connection),
         (Texts.GateFilterLabel, EventCategory.Gate),
         (Texts.ParkingFilterLabel, EventCategory.Parking),
+        (Texts.CameraFilterLabel, EventCategory.Camera),
         (Texts.MonitorFilterLabel, EventCategory.Monitor),
         (Texts.SystemFilterLabel, EventCategory.System)
     ];
@@ -55,6 +57,11 @@ public class WorkspaceEventsViewBase : ComponentBase, IDisposable
                            || GetEventTitle(item).Contains(SearchText, StringComparison.OrdinalIgnoreCase)
                            || GetEventDescription(item).Contains(SearchText, StringComparison.OrdinalIgnoreCase))
             .ToArray();
+
+    protected static string EventTitleClass => "text-base font-semibold text-calm-900";
+
+    protected static string ExpandedCameraImageStyle =>
+        "width: 90vw; height: 90vh; object-fit: contain;";
 
     public void Dispose()
     {
@@ -76,8 +83,8 @@ public class WorkspaceEventsViewBase : ComponentBase, IDisposable
     {
         var isSelected = category == SelectedCategory;
         return isSelected
-            ? "inline-flex min-h-12 items-center justify-center rounded-md bg-brand-200 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-brand-400"
-            : "inline-flex min-h-12 items-center justify-center rounded-md bg-white/85 px-4 py-3 text-sm font-semibold text-calm-700 transition-all duration-500 ease-out hover:bg-calm-100";
+            ? "inline-flex min-h-12 min-w-0 items-center justify-center rounded-md bg-brand-200 px-2 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-brand-400"
+            : "inline-flex min-h-12 min-w-0 items-center justify-center rounded-md bg-white/85 px-2 py-3 text-sm font-semibold text-calm-700 transition-all duration-500 ease-out hover:bg-calm-100";
     }
 
     protected string FormatTimestamp(DateTimeOffset timestamp)
@@ -113,6 +120,7 @@ public class WorkspaceEventsViewBase : ComponentBase, IDisposable
             EventKind.ParkingSlotAvailabilityChanged => string.Format(
                 Texts.ParkingSlotAvailabilityChangedTitleFormat,
                 item.Subject ?? string.Empty),
+            EventKind.CameraSnapshotCaptured => Texts.CameraSnapshotCapturedTitle,
             EventKind.AllowedCardsChanged => Texts.AllowedCardsChangedTitle,
             EventKind.BlockedCardsChanged => Texts.BlockedCardsChangedTitle,
             _ => string.Empty
@@ -157,6 +165,7 @@ public class WorkspaceEventsViewBase : ComponentBase, IDisposable
                 item.CurrentValue)}",
             EventKind.ParkingSlotAvailabilityChanged => $"{item.Subject}: {
                 ParseBooleanTransition(item.PreviousValue, item.CurrentValue)}",
+            EventKind.CameraSnapshotCaptured => GetCameraSnapshotDescription(item),
             EventKind.AllowedCardsChanged => FormatTransition(item.PreviousValue, item.CurrentValue),
             EventKind.BlockedCardsChanged => FormatTransition(item.PreviousValue, item.CurrentValue),
             _ => string.Empty
@@ -166,6 +175,21 @@ public class WorkspaceEventsViewBase : ComponentBase, IDisposable
     private IEventsService RequireEventsService()
     {
         return EventsService ?? throw new InvalidOperationException("Events service is not available.");
+    }
+
+    protected static bool HasAttachment(EventFeedItem item)
+    {
+        return !string.IsNullOrWhiteSpace(item.AttachmentDataUrl);
+    }
+
+    protected void OpenCameraSnapshot(string? imageSource)
+    {
+        SelectedCameraImageSource = imageSource;
+    }
+
+    protected void CloseCameraSnapshot()
+    {
+        SelectedCameraImageSource = null;
     }
 
     private ILocalizationService RequireLocalizationService()
@@ -188,6 +212,24 @@ public class WorkspaceEventsViewBase : ComponentBase, IDisposable
         return bool.TryParse(rawValue, out var parsed) && parsed
             ? Texts.EnabledLabel
             : Texts.DisabledLabel;
+    }
+
+    private static string GetCameraSnapshotDescription(EventFeedItem item)
+    {
+        return $"PHOTO SAVED: {NormalizeSnapshotName(item.Subject)}";
+    }
+
+    private static string NormalizeSnapshotName(string? rawName)
+    {
+        if (string.IsNullOrWhiteSpace(rawName))
+        {
+            return "ENTRY CAMERA";
+        }
+
+        var name = Path.GetFileNameWithoutExtension(rawName);
+        return string.IsNullOrWhiteSpace(name)
+            ? "ENTRY CAMERA"
+            : name.ToUpperInvariant();
     }
 
     private string ParseBooleanTransition(string? previousValue, string? currentValue)

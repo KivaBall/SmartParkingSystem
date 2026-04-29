@@ -10,58 +10,115 @@
 }
 else
 {
-    <section class="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-        <article class="@GateVisualClass" style="@GateVisualStyle">
-            <div class="grid gap-4">
-                <div class="flex min-h-[12.5rem] items-center justify-center rounded-md bg-calm-50 @VisualAccentClass">
-                    <i data-lucide="rows-4" class="h-64 w-64"></i>
+    <section class="space-y-4">
+        <div class="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+            <article class="@GateVisualClass" style="@GateVisualStyle">
+                <div class="grid gap-4">
+                    <div class="flex min-h-[12.5rem] items-center justify-center rounded-md bg-calm-50 @VisualAccentClass">
+                        <i data-lucide="rows-4" class="h-64 w-64"></i>
+                    </div>
+
+                    <div class="rounded-md bg-calm-50 px-4 py-4 text-center @VisualAccentClass">
+                        <p class="text-5xl font-extrabold leading-none">@CountdownLabel</p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="@GateActionsClass" style="@GateActionsStyle">
+                <div class="mb-8 flex items-center justify-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-warm-700">
+                        <i data-lucide="panel-top-open"></i>
+                    </div>
+
+                    <div>
+                        <p class="text-base font-semibold text-calm-900">@Texts.GateSubtitle</p>
+                    </div>
                 </div>
 
-                <div class="rounded-md bg-calm-50 px-4 py-4 text-center @VisualAccentClass">
-                    <p class="text-5xl font-extrabold leading-none">@CountdownLabel</p>
-                </div>
-            </div>
-        </article>
+                <div class="grid gap-3">
+                    <button class="@PrimaryActionButtonClass"
+                            disabled="@IsForceOpenDisabled"
+                            @onclick="ForceOpenAsync">
+                        <i data-lucide="arrow-up-to-line"></i>
+                        <span>@Texts.ForceOpenButton</span>
+                    </button>
 
-        <article class="@GateActionsClass" style="@GateActionsStyle">
+                    <button class="@MintActionButtonClass"
+                            disabled="@IsTemporaryOpenDisabled"
+                            @onclick="OpenTemporarilyAsync">
+                        <i data-lucide="timer-reset"></i>
+                        <span>@Texts.OpenTemporarilyButton</span>
+                    </button>
+
+                    <button class="@NeutralActionButtonClass"
+                            disabled="@IsCloseDisabled"
+                            @onclick="CloseAsync">
+                        <i data-lucide="arrow-down-to-line"></i>
+                        <span>@Texts.CloseButton</span>
+                    </button>
+
+                    <button class="@WarmActionButtonClass"
+                            disabled="@IsLockDisabled"
+                            @onclick="ToggleLockAsync">
+                        <i data-lucide="shield-ban"></i>
+                        <span>@LockButtonLabel</span>
+                    </button>
+                </div>
+            </article>
+        </div>
+
+        <article class="@CameraPanelClass" style="@CameraPanelStyle">
             <div class="mb-8 flex items-center justify-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-warm-700">
-                    <i data-lucide="panel-top-open"></i>
+                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
+                    <i data-lucide="camera"></i>
                 </div>
 
-                <div>
-                    <p class="text-base font-semibold text-calm-900">@Texts.GateSubtitle</p>
-                </div>
+                <p class="text-base font-semibold text-calm-900">@Texts.EntryCameraTitle</p>
             </div>
 
-            <div class="grid gap-3">
-                <button class="@PrimaryActionButtonClass"
-                        disabled="@IsForceOpenDisabled"
-                        @onclick="ForceOpenAsync">
-                    <i data-lucide="arrow-up-to-line"></i>
-                    <span>@Texts.ForceOpenButton</span>
-                </button>
+            <div class="rounded-md bg-white/85 p-5">
+                <div class="rounded-md bg-calm-50" style="position: relative; overflow: hidden; aspect-ratio: 16 / 9;">
+                    <video id="entry-camera-preview"
+                           autoplay
+                           muted
+                           playsinline
+                           style="@CameraPreviewStyle"></video>
 
-                <button class="@MintActionButtonClass"
-                        disabled="@IsTemporaryOpenDisabled"
-                        @onclick="OpenTemporarilyAsync">
-                    <i data-lucide="timer-reset"></i>
-                    <span>@Texts.OpenTemporarilyButton</span>
-                </button>
+                    @if (!IsCameraActive)
+                    {
+                        <div class="flex h-full items-center justify-center px-4 py-6">
+                            <i data-lucide="camera-off"></i>
+                        </div>
+                    }
 
-                <button class="@NeutralActionButtonClass"
-                        disabled="@IsCloseDisabled"
-                        @onclick="CloseAsync">
-                    <i data-lucide="arrow-down-to-line"></i>
-                    <span>@Texts.CloseButton</span>
-                </button>
+                    <div class="flex items-center gap-2 rounded-md p-2"
+                         style="@CameraControlsStyle">
+                        <select id="entry-camera-device"
+                                class="min-h-12 min-w-0 rounded-md bg-calm-50 px-4 py-3 text-sm font-semibold text-calm-900 outline-none"
+                                style="width: min(18rem, 62vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                                disabled="@IsCameraActive"
+                                @bind="SelectedCameraDeviceId">
+                            @if (CameraDevices.Count == 0)
+                            {
+                                <option value="">@Texts.EntryCameraNoDevicesLabel</option>
+                            }
+                            else
+                            {
+                                @foreach (var cameraDevice in CameraDevices)
+                                {
+                                    <option value="@cameraDevice.Id">@TruncateCameraDeviceLabel(cameraDevice.Label)</option>
+                                }
+                            }
+                        </select>
 
-                <button class="@WarmActionButtonClass"
-                        disabled="@IsLockDisabled"
-                        @onclick="ToggleLockAsync">
-                    <i data-lucide="shield-ban"></i>
-                    <span>@LockButtonLabel</span>
-                </button>
+                        <button class="@CameraIconButtonClass"
+                                type="button"
+                                disabled="@IsCameraToggleDisabled"
+                                @onclick="ToggleCameraAsync">
+                            <i data-lucide="@CameraToggleIcon"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </article>
     </section>

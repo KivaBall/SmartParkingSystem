@@ -5,6 +5,25 @@
     .workspace-parking-floor-layer {
         transition: opacity 250ms ease-out;
     }
+
+    .workspace-parking-edit-button {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    @@media (min-width: 640px) {
+        .workspace-parking-edit-button {
+            flex: 0 0 3.5rem;
+            width: 3.5rem;
+        }
+
+        .workspace-parking-header-floor {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+    }
 </style>
 
 @if (IsLoading)
@@ -18,7 +37,7 @@ else
 {
     <section class="space-y-4">
         <article class="@MapClass" style="@MapStyle">
-            <div class="mb-8 flex items-center justify-center gap-3" style="position: relative;">
+            <div class="mb-8 flex flex-col items-center justify-center gap-3 sm:flex-row" style="position: relative;">
                 <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
                         <i data-lucide="circle-parking"></i>
@@ -27,7 +46,7 @@ else
                     <p class="text-base font-semibold text-calm-900">@Texts.MapTitle</p>
                 </div>
 
-                <div class="flex items-center gap-2" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%);">
+                <div class="workspace-parking-header-floor flex items-center justify-center gap-2">
                     <button class="inline-flex h-12 w-12 items-center justify-center rounded-md bg-white/85 text-calm-700 transition-all duration-500 ease-out hover:bg-calm-100 disabled:cursor-default disabled:opacity-50"
                             type="button"
                             disabled="@(!CanMoveToPreviousFloor)"
@@ -67,7 +86,8 @@ else
                                         <i data-lucide="@GetMarkerIcon(slot)" style="width: 62%; height: 62%;"></i>
                                     </button>
 
-                                    <span class="font-semibold text-calm-900" style="@MarkerLabelStyle">@slot.Label</span>
+                                    <span class="font-semibold text-calm-900"
+                                          style="@MarkerLabelStyle">@slot.Label</span>
                                 </div>
                             </div>
                         }
@@ -112,55 +132,59 @@ else
                     {
                         <div class="shrink-0 rounded-md bg-white/90 p-5 text-calm-900">
                             <div class="flex h-full flex-col justify-center gap-4">
-                                <div class="grid grid-cols-3 gap-3">
-                                    <button class="flex h-14 w-14 items-center justify-center rounded-md bg-warm-100 text-calm-900 transition-all duration-[500ms] ease-out hover:bg-warm-200 disabled:cursor-default disabled:opacity-50"
-                                            type="button"
-                                            disabled="@IsBusy"
-                                            @onclick="ToggleSelectedSlotAsync">
-                                        <i data-lucide="power"></i>
-                                    </button>
-                                    <button class="flex h-14 w-14 items-center justify-center rounded-md bg-brand-100 text-calm-900 transition-all duration-[500ms] ease-out hover:bg-brand-200"
-                                            type="button"
-                                            disabled="@IsBusy"
-                                            @onclick="MoveUpAsync">
-                                        <i data-lucide="arrow-up"></i>
-                                    </button>
-                                    <button class="flex h-14 w-14 items-center justify-center rounded-md bg-mint-100 text-calm-900 transition-all duration-[500ms] ease-out hover:bg-mint-200"
-                                            type="button"
-                                            disabled="@IsBusy"
-                                            @onclick="ResetPositionAsync">
-                                        <i data-lucide="rotate-ccw"></i>
-                                    </button>
+                                <div class="grid gap-3">
+                                    <div class="flex gap-3">
+                                        <button class='@ParkingEditButtonClass("bg-warm-100 hover:bg-warm-200")'
+                                                type="button"
+                                                disabled="@IsBusy"
+                                                @onclick="ToggleSelectedSlotAsync">
+                                            <i data-lucide="power"></i>
+                                        </button>
+                                        <button class='@ParkingEditButtonClass("bg-brand-100 hover:bg-brand-200")'
+                                                type="button"
+                                                disabled="@IsBusy"
+                                                @onclick="MoveUpAsync">
+                                            <i data-lucide="arrow-up"></i>
+                                        </button>
+                                        <button class='@ParkingEditButtonClass("bg-mint-100 hover:bg-mint-200")'
+                                                type="button"
+                                                disabled="@IsBusy"
+                                                @onclick="ResetPositionAsync">
+                                            <i data-lucide="rotate-ccw"></i>
+                                        </button>
+                                    </div>
 
-                                    <button class="flex h-14 w-14 items-center justify-center rounded-md bg-brand-100 text-calm-900 transition-all duration-[500ms] ease-out hover:bg-brand-200"
-                                            type="button"
-                                            disabled="@IsBusy"
-                                            @onclick="MoveLeftAsync">
-                                        <i data-lucide="arrow-left"></i>
-                                    </button>
-                                    <button class="flex h-14 w-14 items-center justify-center rounded-md bg-brand-100 text-calm-900 transition-all duration-[500ms] ease-out hover:bg-brand-200"
-                                            type="button"
-                                            disabled="@IsBusy"
-                                            @onclick="MoveDownAsync">
-                                        <i data-lucide="arrow-down"></i>
-                                    </button>
-                                    <button class="flex h-14 w-14 items-center justify-center rounded-md bg-brand-100 text-calm-900 transition-all duration-[500ms] ease-out hover:bg-brand-200"
-                                            type="button"
-                                            disabled="@IsBusy"
-                                            @onclick="MoveRightAsync">
-                                        <i data-lucide="arrow-right"></i>
-                                    </button>
+                                    <div class="flex gap-3">
+                                        <button class='@ParkingEditButtonClass("bg-brand-100 hover:bg-brand-200")'
+                                                type="button"
+                                                disabled="@IsBusy"
+                                                @onclick="MoveLeftAsync">
+                                            <i data-lucide="arrow-left"></i>
+                                        </button>
+                                        <button class='@ParkingEditButtonClass("bg-brand-100 hover:bg-brand-200")'
+                                                type="button"
+                                                disabled="@IsBusy"
+                                                @onclick="MoveDownAsync">
+                                            <i data-lucide="arrow-down"></i>
+                                        </button>
+                                        <button class='@ParkingEditButtonClass("bg-brand-100 hover:bg-brand-200")'
+                                                type="button"
+                                                disabled="@IsBusy"
+                                                @onclick="MoveRightAsync">
+                                            <i data-lucide="arrow-right"></i>
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div class="grid gap-3" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
-                                    <button class="inline-flex h-12 items-center justify-center rounded-md bg-brand-100 text-calm-900 transition-all duration-500 ease-out hover:bg-brand-200 disabled:cursor-default disabled:opacity-50"
+                                <div class="flex gap-3">
+                                    <button class="inline-flex h-12 flex-1 items-center justify-center rounded-md bg-brand-100 text-calm-900 transition-all duration-500 ease-out hover:bg-brand-200 disabled:cursor-default disabled:opacity-50"
                                             type="button"
                                             disabled="@(!CanRaiseSelectedSlot)"
                                             @onclick="RaiseSelectedSlotAsync">
                                         <i data-lucide="chevrons-up"></i>
                                     </button>
 
-                                    <button class="inline-flex h-12 items-center justify-center rounded-md bg-brand-100 text-calm-900 transition-all duration-500 ease-out hover:bg-brand-200 disabled:cursor-default disabled:opacity-50"
+                                    <button class="inline-flex h-12 flex-1 items-center justify-center rounded-md bg-brand-100 text-calm-900 transition-all duration-500 ease-out hover:bg-brand-200 disabled:cursor-default disabled:opacity-50"
                                             type="button"
                                             disabled="@(!CanLowerSelectedSlot)"
                                             @onclick="LowerSelectedSlotAsync">

@@ -47,6 +47,21 @@ public sealed class EventsService : IEventsService, IDisposable
         }
     }
 
+    public void AddCameraSnapshotEvent(string filePath)
+    {
+        var attachmentDataUrl = $"data:image/jpeg;base64,{Convert.ToBase64String(File.ReadAllBytes(filePath))}";
+
+        lock (_eventsSync)
+        {
+            AddEvent(
+                EventCategory.Camera,
+                EventKind.CameraSnapshotCaptured,
+                Path.GetFileName(filePath),
+                attachmentDataUrl: attachmentDataUrl);
+            PruneExpiredEvents();
+        }
+    }
+
     private void OnSessionChanged(DeviceControllerSession? session)
     {
         lock (_eventsSync)
@@ -249,7 +264,8 @@ public sealed class EventsService : IEventsService, IDisposable
         EventKind kind,
         string? subject = null,
         string? previousValue = null,
-        string? currentValue = null)
+        string? currentValue = null,
+        string? attachmentDataUrl = null)
     {
         _events.Add(
             new EventFeedItem(
@@ -259,7 +275,8 @@ public sealed class EventsService : IEventsService, IDisposable
                 subject,
                 previousValue,
                 currentValue,
-                DateTimeOffset.UtcNow));
+                DateTimeOffset.UtcNow,
+                attachmentDataUrl));
     }
 
     private void PruneExpiredEvents()
