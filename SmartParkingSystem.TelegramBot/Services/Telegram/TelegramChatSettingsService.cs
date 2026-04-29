@@ -68,6 +68,10 @@ public sealed class TelegramChatSettingsService(ITelegramChatSettingsStore store
             {
                 ParkingNotificationsEnabled = !current.ParkingNotificationsEnabled
             },
+            TelegramNotificationKind.Camera => current with
+            {
+                CameraNotificationsEnabled = !current.CameraNotificationsEnabled
+            },
             TelegramNotificationKind.Monitor => current with
             {
                 MonitorNotificationsEnabled = !current.MonitorNotificationsEnabled

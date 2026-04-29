@@ -64,6 +64,24 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         set => RequireSettingsPreferencesService().EditParkingEnabled = value;
     }
 
+    protected bool CameraAutoSnapshotEnabled
+    {
+        get => RequireSettingsPreferencesService().CameraAutoSnapshotEnabled;
+        set => RequireSettingsPreferencesService().CameraAutoSnapshotEnabled = value;
+    }
+
+    protected int CameraAutoSnapshotDelayMs
+    {
+        get => RequireSettingsPreferencesService().CameraAutoSnapshotDelayMs;
+        set => RequireSettingsPreferencesService().CameraAutoSnapshotDelayMs = value;
+    }
+
+    protected bool KeepCameraEnabledOutsideGate
+    {
+        get => RequireSettingsPreferencesService().KeepCameraEnabledOutsideGate;
+        set => RequireSettingsPreferencesService().KeepCameraEnabledOutsideGate = value;
+    }
+
     protected static string EditableClass => string.Empty;
 
     protected string ActionsClass => IsExiting
@@ -77,25 +95,31 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         ? "rounded-md bg-brand-100/80 px-4 py-4 animate-exit-left"
         : "rounded-md bg-brand-100/80 px-4 py-4 animate-page-enter-left opacity-0";
 
-    protected string GateSectionStyle => "animation-delay: 180ms;";
+    protected string GateSectionStyle => IsExiting ? "animation-delay: 480ms;" : "animation-delay: 180ms;";
 
     protected string ParkingSectionClass => IsExiting
         ? "rounded-md bg-mint-100 px-4 py-4 animate-exit-right"
         : "rounded-md bg-mint-100 px-4 py-4 animate-page-enter-right opacity-0";
 
-    protected string ParkingSectionStyle => IsExiting ? "animation-delay: 120ms;" : "animation-delay: 320ms;";
+    protected string ParkingSectionStyle => IsExiting ? "animation-delay: 360ms;" : "animation-delay: 320ms;";
 
     protected string CardsSectionClass => IsExiting
-        ? "rounded-md bg-white/85 px-4 py-4 animate-exit-left"
-        : "rounded-md bg-white/85 px-4 py-4 animate-page-enter-left opacity-0";
+        ? "rounded-md bg-white/85 px-4 py-4 animate-exit-right"
+        : "rounded-md bg-white/85 px-4 py-4 animate-page-enter-right opacity-0";
 
-    protected string CardsSectionStyle => IsExiting ? "animation-delay: 120ms;" : "animation-delay: 320ms;";
+    protected string CardsSectionStyle => IsExiting ? "animation-delay: 120ms;" : "animation-delay: 600ms;";
+
+    protected string CameraSectionClass => IsExiting
+        ? "rounded-md bg-brand-100/80 px-4 py-4 animate-exit-left"
+        : "rounded-md bg-brand-100/80 px-4 py-4 animate-page-enter-left opacity-0";
+
+    protected string CameraSectionStyle => IsExiting ? "animation-delay: 240ms;" : "animation-delay: 460ms;";
 
     protected string SystemSectionClass => IsExiting
         ? "rounded-md bg-warm-100 px-4 py-4 animate-exit-right"
         : "rounded-md bg-warm-100 px-4 py-4 animate-page-enter-right opacity-0";
 
-    protected string SystemSectionStyle => IsExiting ? "animation-delay: 0ms;" : "animation-delay: 460ms;";
+    protected string SystemSectionStyle => IsExiting ? "animation-delay: 0ms;" : "animation-delay: 740ms;";
 
     public void Dispose()
     {
@@ -259,6 +283,16 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
     protected void ToggleEditParking()
     {
         EditParkingEnabled = !EditParkingEnabled;
+    }
+
+    protected void ToggleCameraAutoSnapshot()
+    {
+        CameraAutoSnapshotEnabled = !CameraAutoSnapshotEnabled;
+    }
+
+    protected void ToggleKeepCameraEnabledOutsideGate()
+    {
+        KeepCameraEnabledOutsideGate = !KeepCameraEnabledOutsideGate;
     }
 
     private IAdminService RequireAdminService()

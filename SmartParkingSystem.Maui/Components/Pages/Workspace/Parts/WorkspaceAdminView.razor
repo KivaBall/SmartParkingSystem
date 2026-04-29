@@ -68,7 +68,7 @@
                             </div>
                         </div>
 
-                        <div class="space-y-3">
+                        <div class="grid gap-3">
                             <div class="rounded-md bg-white px-4 py-4">
                                 <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.ServoOpenAngleLabel</p>
                                 <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
@@ -136,7 +136,7 @@
                             </div>
                         </div>
 
-                        <div class="space-y-3">
+                        <div class="grid gap-3">
                             <div class="rounded-md bg-white px-4 py-4">
                                 <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.OccupiedThresholdLabel</p>
                                 <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
@@ -182,51 +182,105 @@
                 </div>
 
                 <div class="grid gap-4 lg:grid-cols-[1fr_1fr]">
-                    <section class="@CardsSectionClass" style="@CardsSectionStyle">
+                    <section class="@CameraSectionClass" style="@CameraSectionStyle">
                         <div class="mb-8 flex items-center justify-center gap-3">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-md bg-brand-100/80 text-calm-700">
-                                <i data-lucide="credit-card"></i>
+                            <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
+                                <i data-lucide="camera"></i>
                             </div>
 
                             <div>
-                                <p class="text-base font-semibold text-calm-900">@Texts.CardsTitle</p>
+                                <p class="text-base font-semibold text-calm-900">@Texts.CameraTitle</p>
                             </div>
                         </div>
 
-                        <div class="grid gap-3 lg:grid-cols-[1fr_1fr]">
+                        <div class="grid gap-3">
                             <div class="rounded-md bg-white px-4 py-4">
-                                <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.AllowedCardsLabel</p>
-                                <textarea class="min-h-16 h-full w-full resize-none rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
-                                          @bind="EditableSettings.AllowedCardsText"></textarea>
+                                <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-calm-900">@Texts.CameraAutoSnapshotLabel</p>
+                                    </div>
+
+                                    <button class="@GetToggleButtonClass(CameraAutoSnapshotEnabled)"
+                                            type="button"
+                                            @onclick="ToggleCameraAutoSnapshot">
+                                        <span>@GetToggleButtonLabel(CameraAutoSnapshotEnabled)</span>
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="rounded-md bg-white px-4 py-4">
-                                <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.BlockedCardsLabel</p>
-                                <textarea class="min-h-16 h-full w-full resize-none rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
-                                          @bind="EditableSettings.BlockedCardsText"></textarea>
+                                <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.CameraAutoSnapshotDelayLabel</p>
+                                <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                                       type="number"
+                                       min="250"
+                                       max="30000"
+                                       step="250"
+                                       @bind="CameraAutoSnapshotDelayMs"/>
+                            </div>
+
+                            <div class="rounded-md bg-white px-4 py-4">
+                                <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-calm-900">@Texts.KeepCameraEnabledOutsideGateLabel</p>
+                                    </div>
+
+                                    <button class="@GetToggleButtonClass(KeepCameraEnabledOutsideGate)"
+                                            type="button"
+                                            @onclick="ToggleKeepCameraEnabledOutsideGate">
+                                        <span>@GetToggleButtonLabel(KeepCameraEnabledOutsideGate)</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </section>
 
-                    <section class="@SystemSectionClass" style="@SystemSectionStyle">
-                        <div class="mb-8 flex items-center justify-center gap-3">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-warm-700">
-                                <i data-lucide="cpu"></i>
+                    <div class="space-y-4">
+                        <section class="@CardsSectionClass" style="@CardsSectionStyle">
+                            <div class="mb-8 flex items-center justify-center gap-3">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-brand-100/80 text-calm-700">
+                                    <i data-lucide="credit-card"></i>
+                                </div>
+
+                                <div>
+                                    <p class="text-base font-semibold text-calm-900">@Texts.CardsTitle</p>
+                                </div>
                             </div>
 
-                            <div>
-                                <p class="text-base font-semibold text-calm-900">@Texts.SystemTitle</p>
-                            </div>
-                        </div>
+                            <div class="grid gap-3 lg:grid-cols-[1fr_1fr]">
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.AllowedCardsLabel</p>
+                                    <textarea class="min-h-16 h-full w-full resize-none rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                                              @bind="EditableSettings.AllowedCardsText"></textarea>
+                                </div>
 
-                        <div class="rounded-md bg-white px-4 py-4">
-                            <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.TelemetryIntervalLabel</p>
-                            <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
-                                   type="number"
-                                   min="250"
-                                   @bind="EditableSettings.ParkingStatusUpdateIntervalMs"/>
-                        </div>
-                    </section>
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.BlockedCardsLabel</p>
+                                    <textarea class="min-h-16 h-full w-full resize-none rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                                              @bind="EditableSettings.BlockedCardsText"></textarea>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="@SystemSectionClass" style="@SystemSectionStyle">
+                            <div class="mb-8 flex items-center justify-center gap-3">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-warm-700">
+                                    <i data-lucide="cpu"></i>
+                                </div>
+
+                                <div>
+                                    <p class="text-base font-semibold text-calm-900">@Texts.SystemTitle</p>
+                                </div>
+                            </div>
+
+                            <div class="rounded-md bg-white px-4 py-4">
+                                <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.TelemetryIntervalLabel</p>
+                                <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                                       type="number"
+                                       min="250"
+                                       @bind="EditableSettings.ParkingStatusUpdateIntervalMs"/>
+                            </div>
+                        </section>
+                    </div>
                 </div>
             </div>
         </section>

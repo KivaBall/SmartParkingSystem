@@ -1,6 +1,32 @@
 @namespace SmartParkingSystem.Maui.Components.Pages.Workspace.Parts
 @inherits WorkspaceMonitorViewBase
 
+<style>
+    .workspace-monitor-actions {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+
+    .workspace-monitor-texts {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+
+    @@media (min-width: 768px) {
+        .workspace-monitor-texts {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (min-width: 1280px) {
+        .workspace-monitor-actions {
+            grid-template-columns: minmax(0, 1.2fr) auto auto auto;
+        }
+
+        .workspace-monitor-texts {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+</style>
+
 @if (IsLoading)
 {
     <section class="rounded-md bg-white/85 p-6">
@@ -37,8 +63,8 @@ else
                 <p class="text-base font-semibold text-calm-900">@Texts.Title</p>
             </div>
 
-            <div class="space-y-3">
-                <div class="grid gap-3 xl:grid-cols-[1.2fr_auto_auto_auto]">
+            <div class="grid gap-3">
+                <div class="grid gap-3 workspace-monitor-actions">
                     <div class="rounded-md bg-white px-4 py-4">
                         <p class="text-sm font-semibold text-calm-500">@StatusText</p>
                     </div>
@@ -83,7 +109,7 @@ else
                     </div>
                 </div>
 
-                <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div class="grid gap-3 workspace-monitor-texts">
                     <div class="rounded-md bg-white px-4 py-4">
                         <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.DefaultTextLabel</p>
                         <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"

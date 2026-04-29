@@ -34,13 +34,9 @@ public sealed class TelegramNotificationService(
 
             var language = chat.Language ?? TelegramChatLanguage.Ukrainian;
 
-            if (string.IsNullOrWhiteSpace(chat.LastDeliveredEventId))
-            {
-                await chatSettingsService.SetLastDeliveredEventIdAsync(chat.ChatId, latestEventId, cancellationToken);
-                continue;
-            }
-
-            var pendingEvents = GetPendingEvents(orderedEvents, chat.LastDeliveredEventId);
+            var pendingEvents = string.IsNullOrWhiteSpace(chat.LastDeliveredEventId)
+                ? orderedEvents
+                : GetPendingEvents(orderedEvents, chat.LastDeliveredEventId);
             if (pendingEvents.Length == 0)
             {
                 if (!string.Equals(chat.LastDeliveredEventId, latestEventId, StringComparison.Ordinal))
@@ -62,9 +58,22 @@ public sealed class TelegramNotificationService(
             {
                 foreach (var eventItem in filteredEvents)
                 {
+                    var notificationText = menuService.BuildNotificationText(eventItem, language);
+                    if (TryReadJpegDataUrl(eventItem.AttachmentDataUrl, out var photoBytes))
+                    {
+                        await apiClient.SendPhotoAsync(
+                            chat.ChatId,
+                            photoBytes,
+                            $"{eventItem.Id}.jpg",
+                            notificationText,
+                            cancellationToken,
+                            "HTML");
+                        continue;
+                    }
+
                     await apiClient.SendMessageAsync(
                         chat.ChatId,
-                        menuService.BuildNotificationText(eventItem, language),
+                        notificationText,
                         cancellationToken,
                         parseMode: "HTML");
                 }
@@ -122,10 +131,12 @@ public sealed class TelegramNotificationService(
                 or EventKind.AllowedCardsChanged
                 or EventKind.BlockedCardsChanged => TelegramNotificationKind.Admin,
             EventKind.ControllerConnected or EventKind.ControllerDisconnected => TelegramNotificationKind.Connection,
+            EventKind.CameraSnapshotCaptured => TelegramNotificationKind.Camera,
             _ => eventItem.Category switch
             {
                 EventCategory.Gate => TelegramNotificationKind.Gate,
                 EventCategory.Parking => TelegramNotificationKind.Parking,
+                EventCategory.Camera => TelegramNotificationKind.Camera,
                 EventCategory.Monitor => TelegramNotificationKind.Monitor,
                 EventCategory.Connection => TelegramNotificationKind.Connection,
                 EventCategory.System => TelegramNotificationKind.Admin,
@@ -137,10 +148,34 @@ public sealed class TelegramNotificationService(
         {
             TelegramNotificationKind.Gate => settings.GateNotificationsEnabled,
             TelegramNotificationKind.Parking => settings.ParkingNotificationsEnabled,
+            TelegramNotificationKind.Camera => settings.CameraNotificationsEnabled,
             TelegramNotificationKind.Monitor => settings.MonitorNotificationsEnabled,
             TelegramNotificationKind.Admin => settings.AdminNotificationsEnabled,
             TelegramNotificationKind.Connection => settings.ConnectionNotificationsEnabled,
             _ => false
         };
+    }
+
+    private static bool TryReadJpegDataUrl(string? dataUrl, out byte[] bytes)
+    {
+        const string prefix = "data:image/jpeg;base64,";
+        bytes = [];
+
+        if (string.IsNullOrWhiteSpace(dataUrl) ||
+            !dataUrl.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        try
+        {
+            bytes = Convert.FromBase64String(dataUrl[prefix.Length..]);
+            return bytes.Length > 0;
+        }
+        catch (FormatException)
+        {
+            bytes = [];
+            return false;
+        }
     }
 }

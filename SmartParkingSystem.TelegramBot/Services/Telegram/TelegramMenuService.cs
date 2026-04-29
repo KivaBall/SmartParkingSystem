@@ -1,9 +1,9 @@
+using System.Net;
 using SmartParkingSystem.Domain.Models.BackendSync;
 using SmartParkingSystem.Domain.Models.Events;
 using SmartParkingSystem.Domain.Models.Gate;
 using SmartParkingSystem.Domain.Models.Parking;
 using SmartParkingSystem.TelegramBot.Models.Telegram;
-using System.Net;
 
 namespace SmartParkingSystem.TelegramBot.Services.Telegram;
 
@@ -36,7 +36,7 @@ public sealed class TelegramMenuService
             ? $"<b>{title}</b>\n\n{notificationsLine}: {notificationsState}"
             : $"<b>{title}</b>";
 
-        TelegramInlineKeyboardButton[][] rows = settings.BotEnabled
+        var rows = settings.BotEnabled
             ? new[]
             {
                 new[] { new TelegramInlineKeyboardButton(enableButtonText, "menu:toggle-enabled") },
@@ -120,6 +120,12 @@ public sealed class TelegramMenuService
                 ],
                 [
                     BuildToggleButton(
+                        settings.CameraNotificationsEnabled,
+                        Localize(language, "📷 Камера", "📷 Camera"),
+                        "settings:toggle:camera")
+                ],
+                [
+                    BuildToggleButton(
                         settings.MonitorNotificationsEnabled,
                         Localize(language, "📟 Монітор", "📟 Monitor"),
                         "settings:toggle:monitor")
@@ -192,7 +198,10 @@ public sealed class TelegramMenuService
         {
             return (
                 $"<b>{Localize(language, "Паркомісця", "Parking slots")}</b>\n\n{
-                    Localize(language, "Дані по паркомісцях поки недоступні.", "Parking slot data is not available yet.")}",
+                    Localize(
+                        language,
+                        "Дані по паркомісцях поки недоступні.",
+                        "Parking slot data is not available yet.")}",
                 new TelegramInlineKeyboardMarkup(
                 [
                     [
@@ -210,7 +219,8 @@ public sealed class TelegramMenuService
             rows.Add(
             [
                 new TelegramInlineKeyboardButton(
-                    $"{GetParkingSlotEmoji(slot.State)} {slot.Label} · {LocalizeParkingSlotFloor(slot.Floor, language)} · {LocalizeParkingSlotState(slot.State, language)
+                    $"{GetParkingSlotEmoji(slot.State)} {slot.Label} · {LocalizeParkingSlotFloor(slot.Floor, language)
+                    } · {LocalizeParkingSlotState(slot.State, language)
                     }",
                     $"cmd:parking:toggle:{slot.Id}")
             ]);
@@ -298,16 +308,26 @@ public sealed class TelegramMenuService
     public string BuildNotificationText(EventFeedItem item, TelegramChatLanguage language)
     {
         var category = Html(LocalizeEventCategory(item, language));
+        var kyivTime = TimeZoneInfo.ConvertTime(item.CreatedAt, KyivTimeZone);
+        var timeLabel = Localize(language, "Час", "Time");
+        var dayLabel = Localize(language, "День", "Day");
+
+        if (item.Kind == EventKind.CameraSnapshotCaptured)
+        {
+            return string.Join(
+                '\n',
+                $"<b>🔔 {category}</b>",
+                string.Empty,
+                $"{timeLabel}: {kyivTime:HH:mm:ss}",
+                $"{dayLabel}: {kyivTime:yyyy-MM-dd}");
+        }
+
         var eventLabel = Html(LocalizeNotificationFieldLabel(item.Kind, language));
         var subject = string.IsNullOrWhiteSpace(item.Subject)
             ? null
             : Html(ValueOrFallback(item.Subject, language));
         var previousValue = Html(LocalizeEventValue(item.PreviousValue, language));
         var currentValue = Html(LocalizeEventValue(item.CurrentValue, language));
-        var kyivTime = TimeZoneInfo.ConvertTime(item.CreatedAt, KyivTimeZone);
-        var timeLabel = Localize(language, "Час", "Time");
-        var dayLabel = Localize(language, "День", "Day");
-
         var lines = new List<string>
         {
             $"<b>🔔 {category}</b>",
@@ -321,9 +341,9 @@ public sealed class TelegramMenuService
         else
         {
             lines.Add($"{eventLabel}: {FormatChange(previousValue, currentValue)}");
+            lines.Add(string.Empty);
         }
 
-        lines.Add(string.Empty);
         lines.Add($"{timeLabel}: {kyivTime:HH:mm:ss}");
         lines.Add($"{dayLabel}: {kyivTime:yyyy-MM-dd}");
 
@@ -376,6 +396,7 @@ public sealed class TelegramMenuService
         {
             TelegramNotificationKind.Gate => Localize(language, "Ворота", "Gate"),
             TelegramNotificationKind.Parking => Localize(language, "Паркування", "Parking"),
+            TelegramNotificationKind.Camera => Localize(language, "Камера", "Camera"),
             TelegramNotificationKind.Monitor => Localize(language, "Монітор", "Monitor"),
             TelegramNotificationKind.Admin => Localize(language, "Адмін", "Admin"),
             TelegramNotificationKind.Connection => Localize(language, "Підключення", "Connection"),
@@ -538,6 +559,7 @@ public sealed class TelegramMenuService
             EventKind.ParkingThresholdChanged => Localize(language, "Поріг датчика", "Sensor threshold"),
             EventKind.ParkingSlotChanged => Localize(language, "Стан", "State"),
             EventKind.ParkingSlotAvailabilityChanged => Localize(language, "Доступність", "Availability"),
+            EventKind.CameraSnapshotCaptured => Localize(language, "Знімок", "Snapshot"),
             EventKind.AllowedCardsChanged => Localize(language, "Дозволені картки", "Allowed cards"),
             EventKind.BlockedCardsChanged => Localize(language, "Заблоковані картки", "Blocked cards"),
             _ => LocalizeEventKind(kind, language)
@@ -584,6 +606,7 @@ public sealed class TelegramMenuService
             EventCategory.Connection => Localize(language, "Підключення", "Connection"),
             EventCategory.Gate => Localize(language, "Ворота", "Gate"),
             EventCategory.Parking => Localize(language, "Паркування", "Parking"),
+            EventCategory.Camera => Localize(language, "Камера", "Camera"),
             EventCategory.Monitor => Localize(language, "Монітор", "Monitor"),
             EventCategory.System => Localize(language, "Система", "System"),
             _ => item.Category.ToString()
@@ -626,6 +649,7 @@ public sealed class TelegramMenuService
                 language,
                 "Доступність паркомісця",
                 "Parking slot availability"),
+            EventKind.CameraSnapshotCaptured => Localize(language, "Знімок камери", "Camera snapshot"),
             EventKind.AllowedCardsChanged => Localize(language, "Список дозволених карток", "Allowed cards list"),
             EventKind.BlockedCardsChanged => Localize(language, "Список заблокованих карток", "Blocked cards list"),
             _ => kind.ToString()

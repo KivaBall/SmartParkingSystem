@@ -68,7 +68,8 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
 
     protected IReadOnlyList<ParkingSlotSnapshot> VisibleSlots =>
     [
-        .. Slots.Where(slot => slot.Floor == ActiveFloor && (EditParkingEnabled || slot.State != ParkingSlotState.Disabled))
+        .. Slots.Where(slot => slot.Floor == ActiveFloor &&
+                               (EditParkingEnabled || slot.State != ParkingSlotState.Disabled))
     ];
 
     protected ParkingSlotSnapshot? SelectedSlot => Slots.FirstOrDefault(slot => slot.Id == SelectedSlotId);
@@ -78,6 +79,7 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
     protected bool CanRaiseSelectedSlot => !IsBusy && SelectedSlot is { Floor: < MaxFloor };
     protected bool CanLowerSelectedSlot => !IsBusy && SelectedSlot is { Floor: > MinFloor };
     protected string FloorLayerStyle => IsFloorContentVisible ? "opacity: 1;" : "opacity: 0;";
+
     protected string ParkingMapImagePath => ActiveFloor == MinFloor
         ? "assets/parking-shape-first.svg"
         : "assets/parking-shape-second.svg";
@@ -110,9 +112,12 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
 
     protected string SelectedSlotBadgeClass => SelectedSlot?.State switch
     {
-        ParkingSlotState.Free => "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-mint-300 text-calm-900",
-        ParkingSlotState.Occupied => "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-brand-300 text-white",
-        ParkingSlotState.Disabled => "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-warm-100 text-calm-900",
+        ParkingSlotState.Free =>
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-mint-300 text-calm-900",
+        ParkingSlotState.Occupied =>
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-brand-300 text-white",
+        ParkingSlotState.Disabled =>
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-warm-100 text-calm-900",
         _ => "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-white/85 text-calm-900"
     };
 
@@ -136,6 +141,13 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
         RequireDeviceSessionService().SessionChanged -= OnSessionChanged;
         RequireSettingsPreferencesService().PreferencesChanged -= OnPreferencesChanged;
         GC.SuppressFinalize(this);
+    }
+
+    protected static string ParkingEditButtonClass(string colorClass)
+    {
+        return
+            $"workspace-parking-edit-button flex h-14 items-center justify-center rounded-md text-calm-900 transition-all duration-[500ms] ease-out disabled:cursor-default disabled:opacity-50 {
+                colorClass}";
     }
 
     protected override async Task OnInitializedAsync()

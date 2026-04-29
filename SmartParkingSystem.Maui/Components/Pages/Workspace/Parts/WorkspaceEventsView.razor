@@ -1,6 +1,24 @@
 @namespace SmartParkingSystem.Maui.Components.Pages.Workspace.Parts
 @inherits WorkspaceEventsViewBase
 
+<style>
+    .workspace-events-filters {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+
+    @@media (min-width: 768px) {
+        .workspace-events-filters {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @@media (min-width: 1280px) {
+        .workspace-events-filters {
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+        }
+    }
+</style>
+
 <section class="space-y-4">
     <article class="@FiltersClass" style="@FiltersStyle">
         <div class="mb-8 flex items-center justify-center gap-3">
@@ -11,14 +29,14 @@
             <p class="text-base font-semibold text-calm-900">@Texts.Title</p>
         </div>
 
-        <div class="space-y-3">
+        <div class="grid gap-3">
             <div class="rounded-md bg-white px-4 py-4">
                 <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
                        placeholder="@Texts.SearchPlaceholder"
                        @bind="SearchText"/>
             </div>
 
-            <div class="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <div class="grid gap-3 workspace-events-filters">
                 @foreach (var filter in Filters)
                 {
                     <button class="@GetFilterClass(filter.Category)"
@@ -50,15 +68,44 @@
                 @foreach (var item in FilteredEvents)
                 {
                     <div class="rounded-md bg-white/85 px-4 py-4">
-                        <div class="flex items-center justify-between gap-3">
-                            <p class="text-base font-semibold text-calm-900">@GetEventTitle(item)</p>
-                            <p class="text-sm font-semibold text-calm-500">@FormatTimestamp(item.CreatedAt)</p>
-                        </div>
+                        <div class="flex items-center gap-4">
+                            @if (HasAttachment(item))
+                            {
+                                <button type="button"
+                                        class="shrink-0 rounded-md bg-calm-50"
+                                        style="width: clamp(4.5rem, 14vw, 7rem); overflow: hidden; aspect-ratio: 16 / 9;"
+                                        @onclick="@(() => OpenCameraSnapshot(item.AttachmentDataUrl))">
+                                    <img src="@item.AttachmentDataUrl"
+                                         alt=""
+                                         style="width: 100%; height: 100%; object-fit: cover;"/>
+                                </button>
+                            }
 
-                        <p class="mt-2 text-sm font-semibold text-calm-700">@GetEventDescription(item)</p>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center justify-between gap-3">
+                                    <p class="@EventTitleClass">@GetEventTitle(item)</p>
+                                    <p class="shrink-0 text-sm font-semibold text-calm-500">@FormatTimestamp(item.CreatedAt)</p>
+                                </div>
+
+                                <p class="mt-2 text-sm font-semibold text-calm-700">@GetEventDescription(item)</p>
+                            </div>
+                        </div>
                     </div>
                 }
             </div>
         }
     </article>
+
+    @if (!string.IsNullOrWhiteSpace(SelectedCameraImageSource))
+    {
+        <button type="button"
+                class="flex items-center justify-center"
+                style="position: fixed; inset: 0; z-index: 50; margin-top: 0; background: rgba(17, 65, 77, 0.86);"
+                @onclick="CloseCameraSnapshot">
+            <img src="@SelectedCameraImageSource"
+                 alt=""
+                 class="rounded-md"
+                 style="@ExpandedCameraImageStyle"/>
+        </button>
+    }
 </section>

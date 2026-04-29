@@ -25,6 +25,7 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 - `bg-brand-200`
 - `bg-brand-300`
 - `bg-brand-400`
+- `text-brand-400`
 - `text-sky-500`
 
 ### Calm Text / Surface
@@ -50,6 +51,7 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 ### White
 
 - `bg-white`
+- `bg-white/70`
 - `bg-white/80`
 - `bg-white/85`
 
@@ -77,15 +79,19 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 - `p-6`
 - `p-8`
 - `p-10`
+- `p-2`
 - `px-4`
 - `px-2`
 - `py-2`
 - `py-3`
 - `py-4`
 - `py-6`
+- `mt-2`
 - `mt-8`
 - `mb-2`
+- `mb-3`
 - `mb-8`
+- `gap-1`
 - `gap-2`
 - `gap-3`
 - `gap-4`
@@ -118,10 +124,12 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 - `h-12`
 - `h-24`
 - `h-28`
+- `h-64`
 - `w-10`
 - `w-12`
 - `w-24`
 - `w-28`
+- `w-64`
 - `max-w-md`
 - `max-w-6xl`
 - `mx-auto`
@@ -130,6 +138,7 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 ## Allowed Responsive Layout Classes
 
 - `sm:flex-row`
+- `sm:grid-cols-[1fr_1fr]`
 - `sm:grid-cols-[1fr_auto_auto]`
 - `sm:items-end`
 - `sm:h-28`
@@ -144,7 +153,13 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 - `sm:text-lg`
 - `lg:px-8`
 - `lg:grid-cols-[0.95fr_1.05fr]`
+- `lg:grid-cols-[1.05fr_0.95fr]`
+- `lg:grid-cols-[1fr_1fr]`
+- `lg:grid-cols-[1fr_auto]`
+- `lg:grid-cols-[0.75fr_1.25fr]`
+- `lg:items-center`
 - `lg:items-stretch`
+- `lg:justify-start`
 - `lg:p-10`
 - `md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]`
 
@@ -168,7 +183,9 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 - `hover:bg-brand-200`
 - `hover:bg-mint-200`
 - `hover:bg-warm-200`
+- `hover:bg-calm-50`
 - `hover:bg-calm-100`
+- `hover:bg-calm-200`
 - `disabled:cursor-default`
 - `disabled:opacity-50`
 
@@ -177,6 +194,9 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 - `animate-enter-left`
 - `animate-enter-right`
 - `animate-enter-bottom`
+- `animate-page-enter-left`
+- `animate-page-enter-right`
+- `animate-page-enter-bottom`
 - `animate-exit-left`
 - `animate-exit-right`
 - `animate-exit-bottom`
@@ -185,10 +205,21 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 
 - `appearance-none`
 - `outline-none`
+- `resize-none`
 
 ## Allowed Utility Classes
 
 - `antialiased`
+- `text-center`
+
+## Allowed Project CSS Hooks
+
+These are local layout hooks backed by small component-level CSS where Tailwind does not provide the exact responsive grid behavior currently needed.
+
+- `workspace-admin-actions`
+- `workspace-events-filters`
+- `workspace-monitor-actions`
+- `workspace-monitor-texts`
 
 ## Rule For New Classes
 

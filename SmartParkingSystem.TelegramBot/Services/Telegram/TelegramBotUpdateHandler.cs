@@ -522,6 +522,9 @@ public sealed class TelegramBotUpdateHandler(
             case "settings:toggle:parking":
                 kind = TelegramNotificationKind.Parking;
                 return true;
+            case "settings:toggle:camera":
+                kind = TelegramNotificationKind.Camera;
+                return true;
             case "settings:toggle:monitor":
                 kind = TelegramNotificationKind.Monitor;
                 return true;
@@ -562,6 +565,7 @@ public sealed class TelegramBotUpdateHandler(
         {
             TelegramNotificationKind.Gate => settings.GateNotificationsEnabled,
             TelegramNotificationKind.Parking => settings.ParkingNotificationsEnabled,
+            TelegramNotificationKind.Camera => settings.CameraNotificationsEnabled,
             TelegramNotificationKind.Monitor => settings.MonitorNotificationsEnabled,
             TelegramNotificationKind.Admin => settings.AdminNotificationsEnabled,
             TelegramNotificationKind.Connection => settings.ConnectionNotificationsEnabled,

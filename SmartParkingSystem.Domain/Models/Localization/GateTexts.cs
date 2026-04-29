@@ -12,4 +12,6 @@ public sealed record GateTexts(
     string CloseButton,
     string LockButton,
     string UnlockButton,
-    string SecondsUnit);
+    string SecondsUnit,
+    string EntryCameraTitle,
+    string EntryCameraNoDevicesLabel);

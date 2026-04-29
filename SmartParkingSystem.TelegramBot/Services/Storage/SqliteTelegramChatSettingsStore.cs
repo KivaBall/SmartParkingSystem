@@ -46,6 +46,7 @@ public sealed class SqliteTelegramChatSettingsStore(
                                       NotificationsEnabled INTEGER NOT NULL,
                                       GateNotificationsEnabled INTEGER NOT NULL,
                                       ParkingNotificationsEnabled INTEGER NOT NULL,
+                                      CameraNotificationsEnabled INTEGER NOT NULL DEFAULT 0,
                                       MonitorNotificationsEnabled INTEGER NOT NULL,
                                       AdminNotificationsEnabled INTEGER NOT NULL,
                                       ConnectionNotificationsEnabled INTEGER NOT NULL,
@@ -55,6 +56,7 @@ public sealed class SqliteTelegramChatSettingsStore(
 
             await command.ExecuteNonQueryAsync(cancellationToken);
             await EnsureBotEnabledColumnAsync(connection, cancellationToken);
+            await EnsureCameraNotificationsEnabledColumnAsync(connection, cancellationToken);
             await EnsureLastDeliveredEventIdColumnAsync(connection, cancellationToken);
 
             _isInitialized = true;
@@ -85,6 +87,7 @@ public sealed class SqliteTelegramChatSettingsStore(
                                   NotificationsEnabled,
                                   GateNotificationsEnabled,
                                   ParkingNotificationsEnabled,
+                                  CameraNotificationsEnabled,
                                   MonitorNotificationsEnabled,
                                   AdminNotificationsEnabled,
                                   ConnectionNotificationsEnabled,
@@ -112,7 +115,8 @@ public sealed class SqliteTelegramChatSettingsStore(
             reader.GetInt64(6) == 1,
             reader.GetInt64(7) == 1,
             reader.GetInt64(8) == 1,
-            reader.IsDBNull(9) ? null : reader.GetString(9));
+            reader.GetInt64(9) == 1,
+            reader.IsDBNull(10) ? null : reader.GetString(10));
     }
 
     public async Task<IReadOnlyList<TelegramChatSettings>> GetAllChatSettingsAsync(
@@ -135,6 +139,7 @@ public sealed class SqliteTelegramChatSettingsStore(
                                   NotificationsEnabled,
                                   GateNotificationsEnabled,
                                   ParkingNotificationsEnabled,
+                                  CameraNotificationsEnabled,
                                   MonitorNotificationsEnabled,
                                   AdminNotificationsEnabled,
                                   ConnectionNotificationsEnabled,
@@ -156,7 +161,8 @@ public sealed class SqliteTelegramChatSettingsStore(
                     reader.GetInt64(6) == 1,
                     reader.GetInt64(7) == 1,
                     reader.GetInt64(8) == 1,
-                    reader.IsDBNull(9) ? null : reader.GetString(9)));
+                    reader.GetInt64(9) == 1,
+                    reader.IsDBNull(10) ? null : reader.GetString(10)));
         }
 
         return result;
@@ -182,6 +188,7 @@ public sealed class SqliteTelegramChatSettingsStore(
                                   NotificationsEnabled,
                                   GateNotificationsEnabled,
                                   ParkingNotificationsEnabled,
+                                  CameraNotificationsEnabled,
                                   MonitorNotificationsEnabled,
                                   AdminNotificationsEnabled,
                                   ConnectionNotificationsEnabled,
@@ -194,6 +201,7 @@ public sealed class SqliteTelegramChatSettingsStore(
                                   $notificationsEnabled,
                                   $gateNotificationsEnabled,
                                   $parkingNotificationsEnabled,
+                                  $cameraNotificationsEnabled,
                                   $monitorNotificationsEnabled,
                                   $adminNotificationsEnabled,
                                   $connectionNotificationsEnabled,
@@ -205,6 +213,7 @@ public sealed class SqliteTelegramChatSettingsStore(
                                   NotificationsEnabled = excluded.NotificationsEnabled,
                                   GateNotificationsEnabled = excluded.GateNotificationsEnabled,
                                   ParkingNotificationsEnabled = excluded.ParkingNotificationsEnabled,
+                                  CameraNotificationsEnabled = excluded.CameraNotificationsEnabled,
                                   MonitorNotificationsEnabled = excluded.MonitorNotificationsEnabled,
                                   AdminNotificationsEnabled = excluded.AdminNotificationsEnabled,
                                   ConnectionNotificationsEnabled = excluded.ConnectionNotificationsEnabled,
@@ -219,6 +228,7 @@ public sealed class SqliteTelegramChatSettingsStore(
         command.Parameters.AddWithValue("$notificationsEnabled", settings.NotificationsEnabled ? 1 : 0);
         command.Parameters.AddWithValue("$gateNotificationsEnabled", settings.GateNotificationsEnabled ? 1 : 0);
         command.Parameters.AddWithValue("$parkingNotificationsEnabled", settings.ParkingNotificationsEnabled ? 1 : 0);
+        command.Parameters.AddWithValue("$cameraNotificationsEnabled", settings.CameraNotificationsEnabled ? 1 : 0);
         command.Parameters.AddWithValue("$monitorNotificationsEnabled", settings.MonitorNotificationsEnabled ? 1 : 0);
         command.Parameters.AddWithValue("$adminNotificationsEnabled", settings.AdminNotificationsEnabled ? 1 : 0);
         command.Parameters.AddWithValue(
@@ -256,6 +266,21 @@ public sealed class SqliteTelegramChatSettingsStore(
 
         var alterCommand = connection.CreateCommand();
         alterCommand.CommandText = "ALTER TABLE TelegramChatSettings ADD COLUMN LastDeliveredEventId TEXT NULL;";
+        await alterCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task EnsureCameraNotificationsEnabledColumnAsync(
+        SqliteConnection connection,
+        CancellationToken cancellationToken)
+    {
+        if (await HasColumnAsync(connection, "CameraNotificationsEnabled", cancellationToken))
+        {
+            return;
+        }
+
+        var alterCommand = connection.CreateCommand();
+        alterCommand.CommandText =
+            "ALTER TABLE TelegramChatSettings ADD COLUMN CameraNotificationsEnabled INTEGER NOT NULL DEFAULT 0;";
         await alterCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 

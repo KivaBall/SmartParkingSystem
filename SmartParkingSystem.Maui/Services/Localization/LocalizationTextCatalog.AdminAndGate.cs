@@ -7,6 +7,7 @@ internal static partial class LocalizationTextCatalog
     private static readonly AdminTexts EnglishAdminTexts = new AdminTexts(
         "Gate",
         "Parking",
+        "Camera",
         "Cards",
         "System",
         "Refresh",
@@ -19,6 +20,9 @@ internal static partial class LocalizationTextCatalog
         "Forced lock",
         "Scan threshold (cm)",
         "Disabled parking slots",
+        "Post-open snapshots",
+        "Snapshot delay after gate action (ms)",
+        "Keep camera active outside Gate",
         "Parking spot 1",
         "Parking spot 2",
         "Parking spot 3",
@@ -40,6 +44,7 @@ internal static partial class LocalizationTextCatalog
     private static readonly AdminTexts UkrainianAdminTexts = new AdminTexts(
         "Ворота",
         "Паркінг",
+        "Камера",
         "Картки",
         "Система",
         "Оновити",
@@ -52,6 +57,9 @@ internal static partial class LocalizationTextCatalog
         "Примусове блокування",
         "Поріг сканування (см)",
         "Вимкнені паркомісця",
+        "Знімки після відкриття",
+        "Затримка знімка після дії воріт (мс)",
+        "Тримати камеру активною поза вкладкою воріт",
         "Місце P1",
         "Місце P2",
         "Місце P3",
@@ -82,7 +90,9 @@ internal static partial class LocalizationTextCatalog
         "Close",
         "Lock",
         "Unlock",
-        "s");
+        "s",
+        "Entry camera",
+        "No cameras found");
 
     private static readonly GateTexts UkrainianGateTexts = new GateTexts(
         "Ворота",
@@ -96,7 +106,9 @@ internal static partial class LocalizationTextCatalog
         "Закрити",
         "Заблокувати",
         "Розблокувати",
-        "с");
+        "с",
+        "Камера в'їзду",
+        "Камер не знайдено");
 
     public static AdminTexts GetAdminTexts(AppLanguage language)
     {

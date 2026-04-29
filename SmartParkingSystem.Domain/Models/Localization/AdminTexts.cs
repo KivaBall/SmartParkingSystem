@@ -3,6 +3,7 @@
 public sealed record AdminTexts(
     string GateTitle,
     string ParkingTitle,
+    string CameraTitle,
     string CardsTitle,
     string SystemTitle,
     string RefreshButton,
@@ -15,6 +16,9 @@ public sealed record AdminTexts(
     string ForceGateLockLabel,
     string OccupiedThresholdLabel,
     string DisabledParkingSlotsLabel,
+    string CameraAutoSnapshotLabel,
+    string CameraAutoSnapshotDelayLabel,
+    string KeepCameraEnabledOutsideGateLabel,
     string ParkingSpot1Label,
     string ParkingSpot2Label,
     string ParkingSpot3Label,
