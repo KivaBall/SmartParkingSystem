@@ -195,7 +195,7 @@ public sealed class BackendSyncService : IDisposable
         var monitor = await _monitorService.GetSnapshotAsync(cancellationToken);
         var parkingSlots = await _parkingService.GetSlotsAsync(cancellationToken);
         var admin = await _adminService.GetSnapshotAsync(cancellationToken);
-        var events = _eventsService.GetRecentEvents();
+        var events = _eventsService.GetBackendSyncEvents();
 
         return new BackendDeviceStatePayload(
             DateTimeOffset.UtcNow,

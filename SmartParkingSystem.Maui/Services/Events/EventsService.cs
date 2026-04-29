@@ -1,12 +1,17 @@
 using SmartParkingSystem.Domain.Models.DeviceConnection;
 using SmartParkingSystem.Domain.Models.Events;
+using SmartParkingSystem.Maui.Services.AppMemory;
 using SmartParkingSystem.Maui.Services.DeviceConnection.Session;
 
 namespace SmartParkingSystem.Maui.Services.Events;
 
 public sealed class EventsService : IEventsService, IDisposable
 {
-    private static readonly TimeSpan RetentionWindow = TimeSpan.FromMinutes(2);
+    private const int MaxBackendSyncAttachmentCharacters = 768 * 1024;
+    private const int MaxBackendSyncEvents = 25;
+    private const int MaxStoredEvents = 1000;
+
+    private static readonly TimeSpan RetentionWindow = TimeSpan.FromDays(1);
 
     private static readonly IReadOnlyList<(string Label, Func<DeviceControllerConfiguration, string> Selector)>
         MonitorTemplateSelectors =
@@ -21,12 +26,21 @@ public sealed class EventsService : IEventsService, IDisposable
 
     private readonly List<EventFeedItem> _events = [];
     private readonly Lock _eventsSync = new Lock();
+    private readonly IAppMemoryStore _memoryStore;
     private readonly IDeviceSessionService _sessionService;
+    private int _eventsVersion;
     private DeviceControllerSession? _previousSession;
 
-    public EventsService(IDeviceSessionService sessionService)
+    public EventsService(IDeviceSessionService sessionService, IAppMemoryStore memoryStore)
     {
         _sessionService = sessionService;
+        _memoryStore = memoryStore;
+        _events.AddRange(memoryStore.GetEvents());
+        if (PruneStoredEvents())
+        {
+            PersistEvents();
+        }
+
         _previousSession = sessionService.CurrentSession;
         _sessionService.SessionChanged += OnSessionChanged;
     }
@@ -40,7 +54,11 @@ public sealed class EventsService : IEventsService, IDisposable
     {
         lock (_eventsSync)
         {
-            PruneExpiredEvents();
+            if (PruneStoredEvents())
+            {
+                PersistEvents();
+            }
+
             return _events
                 .OrderByDescending(item => item.CreatedAt)
                 .ToArray();
@@ -58,7 +76,27 @@ public sealed class EventsService : IEventsService, IDisposable
                 EventKind.CameraSnapshotCaptured,
                 Path.GetFileName(filePath),
                 attachmentDataUrl: attachmentDataUrl);
-            PruneExpiredEvents();
+            PruneStoredEvents();
+            PersistEvents();
+        }
+    }
+
+    public IReadOnlyList<EventFeedItem> GetBackendSyncEvents()
+    {
+        lock (_eventsSync)
+        {
+            if (PruneStoredEvents())
+            {
+                PersistEvents();
+            }
+
+            var syncEvents = _events
+                .OrderByDescending(item => item.CreatedAt)
+                .Take(MaxBackendSyncEvents)
+                .OrderBy(item => item.CreatedAt)
+                .ToArray();
+
+            return LimitAttachmentPayload(syncEvents);
         }
     }
 
@@ -66,9 +104,14 @@ public sealed class EventsService : IEventsService, IDisposable
     {
         lock (_eventsSync)
         {
+            var previousVersion = _eventsVersion;
             CaptureEvents(_previousSession, session);
             _previousSession = session;
-            PruneExpiredEvents();
+            var pruned = PruneStoredEvents();
+            if (_eventsVersion != previousVersion || pruned)
+            {
+                PersistEvents();
+            }
         }
     }
 
@@ -277,11 +320,53 @@ public sealed class EventsService : IEventsService, IDisposable
                 currentValue,
                 DateTimeOffset.UtcNow,
                 attachmentDataUrl));
+        _eventsVersion++;
     }
 
-    private void PruneExpiredEvents()
+    private bool PruneStoredEvents()
     {
         var threshold = DateTimeOffset.UtcNow - RetentionWindow;
-        _events.RemoveAll(item => item.CreatedAt < threshold);
+        var retainedEvents = _events
+            .Where(item => item.CreatedAt >= threshold)
+            .OrderByDescending(item => item.CreatedAt)
+            .Take(MaxStoredEvents)
+            .OrderBy(item => item.CreatedAt)
+            .ToArray();
+
+        if (_events.SequenceEqual(retainedEvents))
+        {
+            return false;
+        }
+
+        _events.Clear();
+        _events.AddRange(retainedEvents);
+        return true;
+    }
+
+    private void PersistEvents()
+    {
+        _memoryStore.SetEvents(_events);
+    }
+
+    private static IReadOnlyList<EventFeedItem> LimitAttachmentPayload(IReadOnlyList<EventFeedItem> events)
+    {
+        var attachmentCharacters = 0;
+        var trimmedEvents = new EventFeedItem[events.Count];
+
+        for (var index = events.Count - 1; index >= 0; index--)
+        {
+            var eventItem = events[index];
+            var attachmentLength = eventItem.AttachmentDataUrl?.Length ?? 0;
+            if (attachmentLength == 0 || attachmentCharacters + attachmentLength <= MaxBackendSyncAttachmentCharacters)
+            {
+                attachmentCharacters += attachmentLength;
+                trimmedEvents[index] = eventItem;
+                continue;
+            }
+
+            trimmedEvents[index] = eventItem with { AttachmentDataUrl = null };
+        }
+
+        return trimmedEvents;
     }
 }
