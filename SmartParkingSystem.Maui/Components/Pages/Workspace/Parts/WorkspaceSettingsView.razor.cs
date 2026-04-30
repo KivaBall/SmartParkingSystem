@@ -26,14 +26,14 @@ public class WorkspaceSettingsViewBase : ComponentBase, IDisposable
         ? "animate-exit-right rounded-md bg-mint-100 p-6"
         : "animate-page-enter-right rounded-md bg-mint-100 p-6 opacity-0";
 
-    protected string SessionClass => IsExiting
-        ? "animate-exit-right rounded-md bg-warm-100 p-6"
-        : "animate-page-enter-right rounded-md bg-warm-100 p-6 opacity-0";
+    protected string BackendClass => IsExiting
+        ? "animate-exit-right rounded-md bg-white/85 p-6"
+        : "animate-page-enter-right rounded-md bg-white/85 p-6 opacity-0";
 
     protected string CurrentDeviceStyle => IsExiting ? "animation-delay: 240ms;" : "animation-delay: 0ms;";
     protected string InterfaceLanguageStyle => "animation-delay: 120ms;";
     protected string EnvironmentStyle => "animation-delay: 120ms;";
-    protected string SessionStyle => IsExiting ? "animation-delay: 0ms;" : "animation-delay: 240ms;";
+    protected string BackendStyle => IsExiting ? "animation-delay: 0ms;" : "animation-delay: 240ms;";
 
     [Inject]
     protected ILocalizationService? LocalizationService { get; set; }
@@ -45,24 +45,15 @@ public class WorkspaceSettingsViewBase : ComponentBase, IDisposable
     protected ISettingsPreferencesService? SettingsPreferencesService { get; set; }
 
     [Parameter]
-    public EventCallback OnExitRequested { get; set; }
-
-    [Parameter]
-    public EventCallback OnCloseRequested { get; set; }
-
-    [Parameter]
     public EventCallback OnLanguageChanged { get; set; }
 
     protected IReadOnlyList<SettingsInfoItem> DeviceItems { get; set; } = [];
     protected IReadOnlyList<SettingsInfoItem> EnvironmentItems { get; set; } = [];
+    protected string BackendBaseUrl { get; private set; } = string.Empty;
     protected AppLanguage CurrentLanguage => RequireLocalizationService().CurrentLanguage;
     protected SettingsTexts Texts => RequireLocalizationService().GetSettingsTexts();
 
-    protected bool EditParkingEnabled
-    {
-        get => RequireSettingsPreferencesService().EditParkingEnabled;
-        set => RequireSettingsPreferencesService().EditParkingEnabled = value;
-    }
+    protected bool BackendSyncEnabled => RequireSettingsPreferencesService().BackendSyncEnabled;
 
     public void Dispose()
     {
@@ -73,6 +64,7 @@ public class WorkspaceSettingsViewBase : ComponentBase, IDisposable
     protected override Task OnInitializedAsync()
     {
         RequireSettingsPreferencesService().PreferencesChanged += OnPreferencesChanged;
+        BackendBaseUrl = RequireSettingsPreferencesService().BackendBaseUrl;
         EnvironmentItems = RequireSettingsService().GetEnvironmentItems(Texts);
         return Task.CompletedTask;
     }
@@ -99,6 +91,10 @@ public class WorkspaceSettingsViewBase : ComponentBase, IDisposable
                 stateClass}";
     }
 
+    protected string BackendSyncButtonClass => BackendSyncEnabled
+        ? "inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-brand-200 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-brand-400"
+        : "inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-white/85 px-4 py-3 text-sm font-semibold text-calm-700 transition-all duration-500 ease-out hover:bg-calm-100";
+
     protected async Task SetLanguageAsync(AppLanguage language)
     {
         RequireLocalizationService().CurrentLanguage = language;
@@ -106,9 +102,17 @@ public class WorkspaceSettingsViewBase : ComponentBase, IDisposable
         await OnLanguageChanged.InvokeAsync();
     }
 
-    protected Task ToggleEditParkingAsync()
+    protected Task ToggleBackendSyncAsync()
     {
-        EditParkingEnabled = !EditParkingEnabled;
+        var preferencesService = RequireSettingsPreferencesService();
+        preferencesService.BackendSyncEnabled = !preferencesService.BackendSyncEnabled;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    protected Task OnBackendBaseUrlChanged(ChangeEventArgs eventArgs)
+    {
+        BackendBaseUrl = eventArgs.Value?.ToString() ?? string.Empty;
+        RequireSettingsPreferencesService().BackendBaseUrl = BackendBaseUrl;
         return InvokeAsync(StateHasChanged);
     }
 
@@ -137,6 +141,7 @@ public class WorkspaceSettingsViewBase : ComponentBase, IDisposable
 
     private void OnPreferencesChanged()
     {
+        BackendBaseUrl = RequireSettingsPreferencesService().BackendBaseUrl;
         _ = InvokeAsync(StateHasChanged);
     }
 }

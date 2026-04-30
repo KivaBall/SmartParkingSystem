@@ -27,7 +27,6 @@ public static class MauiProgram
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
-        var backendSyncOptions = new BackendSyncOptions();
 
         builder
             .UseMauiApp<App>()
@@ -59,7 +58,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IParkingService, ParkingService>();
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
         builder.Services.AddSingleton<ISettingsPreferencesService, SettingsPreferencesService>();
-        builder.Services.AddSingleton(backendSyncOptions);
+        builder.Services.AddSingleton<BackendSyncOptions>();
         builder.Services.AddSingleton<IBackendCommandExecutionService, BackendCommandExecutionService>();
         builder.Services.AddSingleton<BackendSyncService>();
         builder.Services.AddScoped<ISettingsService, SettingsService>();

@@ -162,19 +162,6 @@ public class WorkspacePageBase : ComponentBase, IDisposable
         RequireNavigationManager().NavigateTo("/");
     }
 
-    protected async Task CloseApplicationAsync()
-    {
-        if (State.IsLeavingWorkspace)
-        {
-            return;
-        }
-
-        State.IsLeavingWorkspace = true;
-        await InvokeAsync(StateHasChanged);
-        await Task.Delay(500);
-        Environment.Exit(0);
-    }
-
     private NavigationManager RequireNavigationManager()
     {
         return NavigationManager ?? throw new InvalidOperationException("Navigation manager is not available.");

@@ -20,6 +20,7 @@ public sealed class BackendSyncService : IDisposable
     private readonly IAdminService _adminService;
     private readonly IBackendCommandExecutionService _commandExecutionService;
     private readonly SemaphoreSlim _connectGate = new SemaphoreSlim(1, 1);
+    private readonly BackendSyncOptions _options;
     private readonly IDashboardService _dashboardService;
     private readonly IEventsService _eventsService;
     private readonly IGateService _gateService;
@@ -42,6 +43,7 @@ public sealed class BackendSyncService : IDisposable
         IEventsService eventsService,
         IBackendCommandExecutionService commandExecutionService)
     {
+        _options = options;
         _dashboardService = dashboardService;
         _sessionService = sessionService;
         _gateService = gateService;
@@ -113,6 +115,11 @@ public sealed class BackendSyncService : IDisposable
         {
             while (await _timer.WaitForNextTickAsync(_shutdownTokenSource.Token))
             {
+                if (!_options.IsEnabled)
+                {
+                    continue;
+                }
+
                 await PushIfIdleAsync(_shutdownTokenSource.Token);
             }
         }
