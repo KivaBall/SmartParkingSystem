@@ -95,12 +95,7 @@ internal static partial class LocalizationTextCatalog
     private static readonly SettingsTexts EnglishSettingsTexts = new SettingsTexts(
         "Current device",
         "Interface language",
-        "Parking preferences",
         "Environment",
-        "Session",
-        "Back to connection",
-        "Close application",
-        "Hide disabled slots",
         "Edit parking",
         "Enabled",
         "Disabled",
@@ -111,17 +106,16 @@ internal static partial class LocalizationTextCatalog
         "Framework",
         ".NET Version",
         "Styling",
-        "Icon system");
+        "Icon system",
+        "Backend",
+        "Sync with backend",
+        "Backend address",
+        "http://127.0.0.1:5112");
 
     private static readonly SettingsTexts UkrainianSettingsTexts = new SettingsTexts(
         "Поточний пристрій",
         "Мова інтерфейсу",
-        "Параметри паркінгу",
         "Середовище",
-        "Сесія",
-        "Назад до підключення",
-        "Закрити застосунок",
-        "Скрити вимкнені слоти",
         "Редагувати паркінг",
         "Увімкнено",
         "Вимкнено",
@@ -132,7 +126,11 @@ internal static partial class LocalizationTextCatalog
         "Фреймворк",
         "Версія .NET",
         "Стилізація",
-        "Система іконок");
+        "Система іконок",
+        "Бекенд",
+        "Синхронізація з бекендом",
+        "Адреса бекенду",
+        "http://127.0.0.1:5112");
 
     public static DashboardTexts GetDashboardTexts(AppLanguage language)
     {

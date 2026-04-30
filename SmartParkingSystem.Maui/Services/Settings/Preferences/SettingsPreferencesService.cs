@@ -10,10 +10,15 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
     private const int DefaultParkingSlotFloor = 1;
     private const int MaxParkingSlotFloor = 2;
     private const int MinParkingSlotFloor = 1;
+    private const string AndroidBackendBaseUrl = "http://10.0.2.2:5112";
+    private const string BackendBaseUrlKey = "backend.base-url";
+    private const string BackendSyncEnabledKey = "backend.sync-enabled";
     private const string CameraAutoSnapshotDelayMsKey = "camera.auto-snapshot-delay-ms";
     private const string CameraAutoSnapshotEnabledKey = "camera.auto-snapshot-enabled";
+    private const string DefaultBackendBaseUrl = "http://127.0.0.1:5112";
     private const string EditParkingEnabledKey = "workspace.edit-parking-enabled";
     private const string KeepCameraEnabledOutsideGateKey = "camera.keep-enabled-outside-gate";
+    private const string WindowsBackendBaseUrl = "http://127.0.0.1:5112";
     public event Action? PreferencesChanged;
 
     public bool EditParkingEnabled
@@ -58,6 +63,22 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
     {
         get => Microsoft.Maui.Storage.Preferences.Default.Get(KeepCameraEnabledOutsideGateKey, false);
         set => SetPreference(KeepCameraEnabledOutsideGateKey, value, false);
+    }
+
+    public bool BackendSyncEnabled
+    {
+        get => Microsoft.Maui.Storage.Preferences.Default.Get(BackendSyncEnabledKey, true);
+        set => SetPreference(BackendSyncEnabledKey, value, true);
+    }
+
+    public string BackendBaseUrl
+    {
+        get
+        {
+            var value = Microsoft.Maui.Storage.Preferences.Default.Get(BackendBaseUrlKey, string.Empty);
+            return string.IsNullOrWhiteSpace(value) ? GetDefaultBackendBaseUrl() : NormalizeBackendBaseUrl(value);
+        }
+        set => SetPreference(BackendBaseUrlKey, NormalizeBackendBaseUrl(value), GetDefaultBackendBaseUrl());
     }
 
     public bool TryGetParkingSlotPosition(string slotId, out double leftPercent, out double topPercent)
@@ -137,6 +158,36 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
         return $"parking.slot-floor.{slotId}";
     }
 
+    private static string GetDefaultBackendBaseUrl()
+    {
+        return DeviceInfo.Current.Platform switch
+        {
+            var platform when platform == DevicePlatform.Android => AndroidBackendBaseUrl,
+            var platform when platform == DevicePlatform.WinUI => WindowsBackendBaseUrl,
+            _ => DefaultBackendBaseUrl
+        };
+    }
+
+    private static string NormalizeBackendBaseUrl(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return GetDefaultBackendBaseUrl();
+        }
+
+        var normalizedValue = value.Trim();
+        if (!normalizedValue.Contains("://", StringComparison.Ordinal))
+        {
+            normalizedValue = $"http://{normalizedValue}";
+        }
+
+        normalizedValue = normalizedValue.TrimEnd('/');
+        return Uri.TryCreate(normalizedValue, UriKind.Absolute, out var uri)
+               && uri.Scheme is "http" or "https"
+            ? normalizedValue
+            : GetDefaultBackendBaseUrl();
+    }
+
     private void SetPreference(string key, bool value, bool defaultValue)
     {
         var currentValue = Microsoft.Maui.Storage.Preferences.Default.Get(key, defaultValue);
@@ -153,6 +204,18 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
     {
         var currentValue = Microsoft.Maui.Storage.Preferences.Default.Get(key, defaultValue);
         if (currentValue == value)
+        {
+            return;
+        }
+
+        Microsoft.Maui.Storage.Preferences.Default.Set(key, value);
+        PreferencesChanged?.Invoke();
+    }
+
+    private void SetPreference(string key, string value, string defaultValue)
+    {
+        var currentValue = Microsoft.Maui.Storage.Preferences.Default.Get(key, defaultValue);
+        if (string.Equals(currentValue, value, StringComparison.Ordinal))
         {
             return;
         }

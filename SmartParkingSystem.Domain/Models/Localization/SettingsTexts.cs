@@ -3,12 +3,7 @@
 public sealed record SettingsTexts(
     string CurrentDeviceTitle,
     string InterfaceLanguageTitle,
-    string ParkingPreferencesTitle,
     string EnvironmentTitle,
-    string SessionTitle,
-    string BackToConnectionButton,
-    string CloseApplicationButton,
-    string HideDisabledSlotsLabel,
     string EditParkingLabel,
     string EnabledLabel,
     string DisabledLabel,
@@ -19,4 +14,8 @@ public sealed record SettingsTexts(
     string FrameworkLabel,
     string DotNetVersionLabel,
     string StylingLabel,
-    string IconSystemLabel);
+    string IconSystemLabel,
+    string BackendTitle,
+    string BackendSyncEnabledLabel,
+    string BackendBaseUrlLabel,
+    string BackendBaseUrlPlaceholder);

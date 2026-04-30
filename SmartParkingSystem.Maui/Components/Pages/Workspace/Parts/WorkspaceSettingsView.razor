@@ -38,9 +38,14 @@
                 </div>
             </div>
 
-            <ConnectionLanguageSwitch EnglishButtonClass="@GetLanguageButtonClass(AppLanguage.English)"
-                                      UkrainianButtonClass="@GetLanguageButtonClass(AppLanguage.Ukrainian)"
-                                      OnLanguageSelected="SetLanguageAsync"/>
+            <div class="grid gap-5">
+                <div class="grid gap-3">
+                    <p class="text-center text-sm font-semibold text-calm-500">@Texts.LocalizationLabel</p>
+                    <ConnectionLanguageSwitch EnglishButtonClass="@GetLanguageButtonClass(AppLanguage.English)"
+                                              UkrainianButtonClass="@GetLanguageButtonClass(AppLanguage.Ukrainian)"
+                                              OnLanguageSelected="SetLanguageAsync"/>
+                </div>
+            </div>
         </article>
     </div>
 
@@ -67,29 +72,31 @@
             </div>
         </article>
 
-        <article class="@SessionClass" style="@SessionStyle">
+        <article class="@BackendClass" style="@BackendStyle">
             <div class="mb-8 flex items-center justify-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-warm-700">
-                    <i data-lucide="log-out"></i>
+                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-brand-100/80 text-calm-700">
+                    <i data-lucide="server"></i>
                 </div>
 
                 <div>
-                    <p class="text-base font-semibold text-calm-900">@Texts.SessionTitle</p>
+                    <p class="text-base font-semibold text-calm-900">@Texts.BackendTitle</p>
                 </div>
             </div>
 
-            <div class="flex flex-col gap-3 sm:flex-row sm:justify-center">
-                <button class="inline-flex min-h-12 items-center gap-2 rounded-md bg-warm-300 px-4 py-3 text-sm font-semibold text-warm-700 transition-all duration-500 ease-out hover:bg-warm-200"
-                        @onclick='() => OnExitRequested.InvokeAsync()'>
-                    <i data-lucide="arrow-left-right"></i>
-                    <span>@Texts.BackToConnectionButton</span>
+            <div class="grid gap-3">
+                <button class="@BackendSyncButtonClass"
+                        @onclick="ToggleBackendSyncAsync">
+                    <i data-lucide="refresh-cw"></i>
+                    <span>@Texts.BackendSyncEnabledLabel: @(BackendSyncEnabled ? Texts.EnabledLabel : Texts.DisabledLabel)</span>
                 </button>
 
-                <button class="inline-flex min-h-12 items-center gap-2 rounded-md bg-brand-300 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-brand-400"
-                        @onclick='() => OnCloseRequested.InvokeAsync()'>
-                    <i data-lucide="power"></i>
-                    <span>@Texts.CloseApplicationButton</span>
-                </button>
+                <label class="grid gap-2">
+                    <span class="text-sm font-semibold text-calm-500">@Texts.BackendBaseUrlLabel</span>
+                    <input class="min-h-12 rounded-md bg-brand-100/70 px-4 py-3 text-sm font-semibold text-calm-900 outline-none transition-all duration-500 ease-out"
+                           value="@BackendBaseUrl"
+                           placeholder="@Texts.BackendBaseUrlPlaceholder"
+                           @onchange="OnBackendBaseUrlChanged"/>
+                </label>
             </div>
         </article>
     </div>

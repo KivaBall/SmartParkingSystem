@@ -6,6 +6,8 @@ public interface ISettingsPreferencesService
     bool CameraAutoSnapshotEnabled { get; set; }
     int CameraAutoSnapshotDelayMs { get; set; }
     bool KeepCameraEnabledOutsideGate { get; set; }
+    bool BackendSyncEnabled { get; set; }
+    string BackendBaseUrl { get; set; }
     event Action? PreferencesChanged;
     bool TryGetParkingSlotPosition(string slotId, out double leftPercent, out double topPercent);
     void SetParkingSlotPosition(string slotId, double leftPercent, double topPercent);

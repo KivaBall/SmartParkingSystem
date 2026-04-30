@@ -35,9 +35,7 @@
                     <WorkspaceAdminView IsExiting="@(!State.IsContentVisible)"/>
                     break;
                 case WorkspaceSection.Settings:
-                    <WorkspaceSettingsView OnExitRequested="HandleExitAsync"
-                                           OnCloseRequested="CloseApplicationAsync"
-                                           OnLanguageChanged="HandleLanguageChangedAsync"
+                    <WorkspaceSettingsView OnLanguageChanged="HandleLanguageChangedAsync"
                                            IsExiting="@(!State.IsContentVisible)"/>
                     break;
                 default:
