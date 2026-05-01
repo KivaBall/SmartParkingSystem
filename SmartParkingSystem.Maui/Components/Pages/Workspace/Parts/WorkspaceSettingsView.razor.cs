@@ -91,9 +91,12 @@ public class WorkspaceSettingsViewBase : ComponentBase, IDisposable
                 stateClass}";
     }
 
-    protected string BackendSyncButtonClass => BackendSyncEnabled
-        ? "inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-brand-200 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-brand-400"
-        : "inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-white/85 px-4 py-3 text-sm font-semibold text-calm-700 transition-all duration-500 ease-out hover:bg-calm-100";
+    protected static string GetBackendToggleButtonClass(bool isActive)
+    {
+        return isActive
+            ? "inline-flex min-h-12 items-center justify-center rounded-md bg-warm-300 px-4 py-3 text-sm font-semibold text-warm-700 transition-all duration-500 ease-out hover:bg-warm-200"
+            : "inline-flex min-h-12 items-center justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-calm-700 transition-all duration-500 ease-out hover:bg-calm-50";
+    }
 
     protected async Task SetLanguageAsync(AppLanguage language)
     {

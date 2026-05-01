@@ -84,11 +84,19 @@
             </div>
 
             <div class="grid gap-3">
-                <button class="@BackendSyncButtonClass"
-                        @onclick="ToggleBackendSyncAsync">
-                    <i data-lucide="refresh-cw"></i>
-                    <span>@Texts.BackendSyncEnabledLabel: @(BackendSyncEnabled ? Texts.EnabledLabel : Texts.DisabledLabel)</span>
-                </button>
+                <div class="rounded-md bg-white px-4 py-4">
+                    <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
+                        <div>
+                            <p class="text-sm font-semibold text-calm-900">@Texts.BackendSyncEnabledLabel</p>
+                        </div>
+
+                        <button class="@GetBackendToggleButtonClass(BackendSyncEnabled)"
+                                type="button"
+                                @onclick="ToggleBackendSyncAsync">
+                            <span>@(BackendSyncEnabled ? Texts.EnabledLabel : Texts.DisabledLabel)</span>
+                        </button>
+                    </div>
+                </div>
 
                 <label class="grid gap-2">
                     <span class="text-sm font-semibold text-calm-500">@Texts.BackendBaseUrlLabel</span>
