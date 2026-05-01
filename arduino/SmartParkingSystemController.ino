@@ -81,13 +81,15 @@ constexpr uint8_t DISPLAY_TEXT_LENGTH = 16;
 constexpr uint8_t NO_PIN = 255;
 constexpr long BT_BAUD_RATE = 9600;
 constexpr uint16_t CONFIG_SIGNATURE = 0x5350;
-constexpr uint8_t CONFIG_VERSION = 4;
+constexpr uint8_t CONFIG_VERSION = 5;
 constexpr unsigned long LCD_MESSAGE_DURATION_MS = 3000UL;
 constexpr uint16_t EEPROM_ADDRESS = 0;
 constexpr size_t RX_BUFFER_SIZE = 40;
 constexpr uint8_t ALL_SLOTS_ENABLED_MASK = (1 << SLOT_COUNT) - 1;
 constexpr char PROTOCOL_FRAME_MARKER[] = "|||";
 constexpr uint8_t PROTOCOL_FRAME_MARKER_LENGTH = 3;
+constexpr unsigned long GATE_PASSAGE_AUTO_EXIT_COOLDOWN_MS = 3000UL;
+constexpr uint8_t GATE_PASSAGE_STABILITY_READS = 2;
 
 // -----------------------------------------------------------------------------
 // Піни паркомісць
@@ -97,6 +99,8 @@ constexpr uint8_t PROTOCOL_FRAME_MARKER_LENGTH = 3;
 // Це дозволяє вже зараз тримати 6 логічних місць у протоколі застосунку.
 const uint8_t trigPins[SLOT_COUNT] = {7, 4, A0, NO_PIN, NO_PIN, NO_PIN};
 const uint8_t echoPins[SLOT_COUNT] = {8, 6, A1, NO_PIN, NO_PIN, NO_PIN};
+constexpr uint8_t GATE_PASSAGE_TRIG_PIN = A2;
+constexpr uint8_t GATE_PASSAGE_ECHO_PIN = A3;
 
 // -----------------------------------------------------------------------------
 // Стан воріт
@@ -136,6 +140,9 @@ struct PersistedConfig
     // Примусові режими воріт.
     uint8_t forceGateOpen;
     uint8_t forceGateLock;
+    uint8_t autoExitOpenEnabled;
+    uint8_t autoCloseAfterPassEnabled;
+    uint16_t gatePassageThresholdCm;
 
     // Які слоти взагалі увімкнені в системі.
     uint8_t slotEnabledMask;
@@ -172,6 +179,14 @@ unsigned long transientDisplayUntil = 0;
 char currentDisplayText[DISPLAY_TEXT_LENGTH + 1] = "";
 char transientDisplayText[DISPLAY_TEXT_LENGTH + 1] = "";
 bool currentDisplayForced = false;
+bool gatePassageOccupied = false;
+bool previousGatePassageOccupied = false;
+bool pendingGatePassageOccupied = false;
+bool gatePassageAutoCloseArmed = false;
+bool gatePassageVehicleSeen = false;
+uint8_t gatePassageStableReads = 0;
+int16_t gatePassageDistanceCm = -1;
+unsigned long lastAutoExitOpenAt = 0;
 
 // -----------------------------------------------------------------------------
 // Runtime-стан паркомісць
@@ -205,6 +220,8 @@ void loadConfig();
 void saveConfig();
 void applyGateOutput();
 void updateGateMode();
+void updateGatePassageState();
+void updateGatePassageAutomation();
 void updateParkingStates();
 void updateLcd();
 void showMessage(const char *line1, const char *line2);
@@ -244,6 +261,8 @@ const __FlashStringHelper *getGateModeText();
 const __FlashStringHelper *getSlotStateText(uint8_t slotIndex);
 void writeSlotLine(uint8_t slotIndex);
 long readDistanceCm(uint8_t trigPin, uint8_t echoPin);
+void startTemporaryGateOpen(bool armAutoClose);
+void resetGatePassageAutomation();
 void trimLine(char *line);
 bool isSlotEnabled(uint8_t slotIndex);
 void setSlotEnabled(uint8_t slotIndex, bool isEnabled);
@@ -283,11 +302,15 @@ void setup()
         }
     }
 
+    pinMode(GATE_PASSAGE_TRIG_PIN, OUTPUT);
+    pinMode(GATE_PASSAGE_ECHO_PIN, INPUT);
+
     // Читаємо конфігурацію з EEPROM.
     // Якщо вона невалідна - ставимо дефолтну.
     loadConfig();
 
     // Приводимо фізичний стан воріт і логічний стан слотів до конфігу.
+    updateGatePassageState();
     updateGateMode();
     updateParkingStates();
     updateDisplayState();
@@ -310,6 +333,9 @@ void loop()
 
     // Реагуємо на RFID-картки.
     handleRfid();
+
+    updateGatePassageState();
+    updateGatePassageAutomation();
 
     // Оновлюємо логіку воріт.
     updateGateMode();
@@ -346,6 +372,9 @@ void setDefaultConfig()
     config.telemetryIntervalMs = 500;
     config.forceGateOpen = 0;
     config.forceGateLock = 0;
+    config.autoExitOpenEnabled = 0;
+    config.autoCloseAfterPassEnabled = 1;
+    config.gatePassageThresholdCm = 20;
 
     config.slotEnabledMask = ALL_SLOTS_ENABLED_MASK;
     config.displayForceEnabled = 0;
@@ -467,11 +496,13 @@ void updateGateMode()
     {
         gateMode = GATE_LOCKED;
         temporaryGateOpen = false;
+        resetGatePassageAutomation();
     }
     else if (config.forceGateOpen)
     {
         gateMode = GATE_FORCED_OPEN;
         temporaryGateOpen = false;
+        resetGatePassageAutomation();
     }
     else if (temporaryGateOpen && millis() < temporaryGateExpiresAt)
     {
@@ -480,6 +511,7 @@ void updateGateMode()
     else
     {
         temporaryGateOpen = false;
+        resetGatePassageAutomation();
         gateMode = GATE_CLOSED;
     }
 
@@ -503,6 +535,88 @@ void applyGateOutput()
     {
         gateServo.write(config.servoClosedAngle);
     }
+}
+
+void updateGatePassageState()
+{
+    previousGatePassageOccupied = gatePassageOccupied;
+
+    long distance = readDistanceCm(GATE_PASSAGE_TRIG_PIN, GATE_PASSAGE_ECHO_PIN);
+    gatePassageDistanceCm = distance;
+    bool measuredOccupied = distance != -1 && distance < config.gatePassageThresholdCm;
+
+    if (measuredOccupied == pendingGatePassageOccupied)
+    {
+        if (gatePassageStableReads < GATE_PASSAGE_STABILITY_READS)
+        {
+            gatePassageStableReads++;
+        }
+    }
+    else
+    {
+        pendingGatePassageOccupied = measuredOccupied;
+        gatePassageStableReads = 1;
+    }
+
+    if (gatePassageStableReads >= GATE_PASSAGE_STABILITY_READS)
+    {
+        gatePassageOccupied = pendingGatePassageOccupied;
+    }
+}
+
+void updateGatePassageAutomation()
+{
+    bool passageBecameOccupied = gatePassageOccupied && !previousGatePassageOccupied;
+    bool passageBecameFree = !gatePassageOccupied && previousGatePassageOccupied;
+
+    if (config.forceGateLock || config.forceGateOpen)
+    {
+        resetGatePassageAutomation();
+        return;
+    }
+
+    if (config.autoExitOpenEnabled
+        && gateMode == GATE_CLOSED
+        && passageBecameOccupied
+        && millis() - lastAutoExitOpenAt >= GATE_PASSAGE_AUTO_EXIT_COOLDOWN_MS)
+    {
+        startTemporaryGateOpen(true);
+        lastAutoExitOpenAt = millis();
+        showMessage("Auto Exit", "Gate Open");
+        setTransientDisplayText(config.displayAllowedText);
+    }
+
+    if (!config.autoCloseAfterPassEnabled || gateMode != GATE_TEMPORARY_OPEN || !gatePassageAutoCloseArmed)
+    {
+        return;
+    }
+
+    if (passageBecameOccupied)
+    {
+        gatePassageVehicleSeen = true;
+    }
+
+    if (gatePassageVehicleSeen && passageBecameFree)
+    {
+        temporaryGateOpen = false;
+        temporaryGateExpiresAt = 0;
+        resetGatePassageAutomation();
+    }
+}
+
+void startTemporaryGateOpen(bool armAutoClose)
+{
+    config.forceGateOpen = 0;
+    temporaryGateOpen = true;
+    temporaryGateExpiresAt = millis() + config.servoOpenDurationMs;
+    gatePassageAutoCloseArmed = armAutoClose && config.autoCloseAfterPassEnabled;
+    gatePassageVehicleSeen = gatePassageAutoCloseArmed && gatePassageOccupied;
+}
+
+void resetGatePassageAutomation()
+{
+    gatePassageAutoCloseArmed = false;
+    gatePassageVehicleSeen = false;
 }
 
 // -----------------------------------------------------------------------------
@@ -697,6 +811,12 @@ void sendConfig()
     btSerial.print(config.forceGateOpen);
     btSerial.print(F("|force_lock="));
     btSerial.print(config.forceGateLock);
+    btSerial.print(F("|auto_exit_open="));
+    btSerial.print(config.autoExitOpenEnabled);
+    btSerial.print(F("|auto_close_after_pass="));
+    btSerial.print(config.autoCloseAfterPassEnabled);
+    btSerial.print(F("|passage_threshold_cm="));
+    btSerial.print(config.gatePassageThresholdCm);
     endProtocolFrame();
 
     for (uint8_t i = 0; i < SLOT_COUNT; i++)
@@ -756,6 +876,10 @@ void sendTelemetry()
     btSerial.print(config.occupiedThresholdCm);
     btSerial.print(F("|telemetry_ms="));
     btSerial.print(config.telemetryIntervalMs);
+    btSerial.print(F("|passage_occupied="));
+    btSerial.print(gatePassageOccupied ? 1 : 0);
+    btSerial.print(F("|passage_distance_cm="));
+    btSerial.print(gatePassageDistanceCm);
     endProtocolFrame();
 
     beginProtocolFrame();
@@ -1050,6 +1174,7 @@ void handleGateCommand(char *context)
             config.forceGateLock = 0;
         }
 
+        resetGatePassageAutomation();
         updateGateMode();
         sendOk("GATE", "FORCE_OPEN_UPDATED");
     }
@@ -1062,9 +1187,7 @@ void handleGateCommand(char *context)
             return;
         }
 
-        config.forceGateOpen = 0;
-        temporaryGateOpen = true;
-        temporaryGateExpiresAt = millis() + config.servoOpenDurationMs;
+        startTemporaryGateOpen(true);
         updateGateMode();
         sendOk("GATE", "TEMP_OPEN_STARTED");
     }
@@ -1074,6 +1197,7 @@ void handleGateCommand(char *context)
         config.forceGateOpen = 0;
         temporaryGateOpen = false;
         temporaryGateExpiresAt = 0;
+        resetGatePassageAutomation();
         updateGateMode();
         sendOk("GATE", "CLOSED");
     }
@@ -1090,6 +1214,7 @@ void handleGateCommand(char *context)
         {
             config.forceGateLock = 1;
             config.forceGateOpen = 0;
+            resetGatePassageAutomation();
         }
         else if (strcmp(value, "OFF") == 0)
         {
@@ -1182,6 +1307,49 @@ void handleConfigCommand(char *context)
         config.telemetryIntervalMs = max(250L, parsedValue);
         updateGateMode();
         sendOk("CONFIG", "TELEMETRY_UPDATED");
+    }
+    else if (strcmp(action, "AUTO_EXIT_OPEN") == 0)
+    {
+        if (strcmp(value, "ON") == 0)
+        {
+            config.autoExitOpenEnabled = 1;
+        }
+        else if (strcmp(value, "OFF") == 0)
+        {
+            config.autoExitOpenEnabled = 0;
+        }
+        else
+        {
+            sendError("CONFIG", "INVALID_AUTO_EXIT_OPEN_VALUE");
+            return;
+        }
+
+        sendOk("CONFIG", "AUTO_EXIT_OPEN_UPDATED");
+    }
+    else if (strcmp(action, "AUTO_CLOSE_AFTER_PASS") == 0)
+    {
+        if (strcmp(value, "ON") == 0)
+        {
+            config.autoCloseAfterPassEnabled = 1;
+        }
+        else if (strcmp(value, "OFF") == 0)
+        {
+            config.autoCloseAfterPassEnabled = 0;
+            resetGatePassageAutomation();
+        }
+        else
+        {
+            sendError("CONFIG", "INVALID_AUTO_CLOSE_AFTER_PASS_VALUE");
+            return;
+        }
+
+        sendOk("CONFIG", "AUTO_CLOSE_AFTER_PASS_UPDATED");
+    }
+    else if (strcmp(action, "PASSAGE_THRESHOLD_CM") == 0)
+    {
+        config.gatePassageThresholdCm = max(1L, parsedValue);
+        updateGatePassageState();
+        sendOk("CONFIG", "PASSAGE_THRESHOLD_UPDATED");
     }
     else
     {
@@ -1455,8 +1623,7 @@ void handleRfid()
             // Якщо ні - запускаємо тимчасове відкриття.
             if (!config.forceGateOpen)
             {
-                temporaryGateOpen = true;
-                temporaryGateExpiresAt = millis() + config.servoOpenDurationMs;
+                startTemporaryGateOpen(true);
             }
 
             updateGateMode();

@@ -107,6 +107,9 @@ public class WorkspaceEventsViewBase : ComponentBase, IDisposable
             EventKind.GateOpenAngleChanged => Texts.GateOpenAngleChangedTitle,
             EventKind.GateClosedAngleChanged => Texts.GateClosedAngleChangedTitle,
             EventKind.GateOpenDurationChanged => Texts.GateOpenDurationChangedTitle,
+            EventKind.GateAutoExitOpenChanged => Texts.GateAutoExitOpenChangedTitle,
+            EventKind.GateAutoCloseAfterPassChanged => Texts.GateAutoCloseAfterPassChangedTitle,
+            EventKind.GatePassageThresholdChanged => Texts.GatePassageThresholdChangedTitle,
             EventKind.MonitorForceModeChanged => Texts.MonitorForceModeChangedTitle,
             EventKind.MonitorTextChanged => Texts.MonitorTextChangedTitle,
             EventKind.MonitorTemplateChanged => string.Format(
@@ -148,6 +151,12 @@ public class WorkspaceEventsViewBase : ComponentBase, IDisposable
                 item.PreviousValue,
                 item.CurrentValue,
                 Texts.MillisecondsUnit),
+            EventKind.GateAutoExitOpenChanged => ParseBooleanLabel(item.CurrentValue),
+            EventKind.GateAutoCloseAfterPassChanged => ParseBooleanLabel(item.CurrentValue),
+            EventKind.GatePassageThresholdChanged => FormatTransition(
+                item.PreviousValue,
+                item.CurrentValue,
+                Texts.CentimetersUnit),
             EventKind.MonitorForceModeChanged => ParseBooleanLabel(item.CurrentValue),
             EventKind.MonitorTextChanged => item.CurrentValue ?? string.Empty,
             EventKind.MonitorTemplateChanged => $"{GetMonitorTemplateLabel(item.Subject)}: {

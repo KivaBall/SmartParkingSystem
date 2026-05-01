@@ -33,6 +33,9 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
             0,
             false,
             false,
+            false,
+            false,
+            0,
             0,
             [],
             0,
@@ -45,6 +48,9 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         0,
         false,
         false,
+        false,
+        false,
+        0,
         0,
         [],
         0,
@@ -104,16 +110,16 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
     protected string ParkingSectionStyle => IsExiting ? "animation-delay: 360ms;" : "animation-delay: 320ms;";
 
     protected string CardsSectionClass => IsExiting
-        ? "rounded-md bg-white/85 px-4 py-4 animate-exit-right"
-        : "rounded-md bg-white/85 px-4 py-4 animate-page-enter-right opacity-0";
+        ? "rounded-md bg-white/85 px-4 py-4 animate-exit-left"
+        : "rounded-md bg-white/85 px-4 py-4 animate-page-enter-left opacity-0";
 
-    protected string CardsSectionStyle => IsExiting ? "animation-delay: 120ms;" : "animation-delay: 600ms;";
+    protected string CardsSectionStyle => IsExiting ? "animation-delay: 240ms;" : "animation-delay: 460ms;";
 
     protected string CameraSectionClass => IsExiting
-        ? "rounded-md bg-brand-100/80 px-4 py-4 animate-exit-left"
-        : "rounded-md bg-brand-100/80 px-4 py-4 animate-page-enter-left opacity-0";
+        ? "rounded-md bg-brand-100/80 px-4 py-4 animate-exit-right"
+        : "rounded-md bg-brand-100/80 px-4 py-4 animate-page-enter-right opacity-0";
 
-    protected string CameraSectionStyle => IsExiting ? "animation-delay: 240ms;" : "animation-delay: 460ms;";
+    protected string CameraSectionStyle => IsExiting ? "animation-delay: 120ms;" : "animation-delay: 600ms;";
 
     protected string SystemSectionClass => IsExiting
         ? "rounded-md bg-warm-100 px-4 py-4 animate-exit-right"
@@ -270,6 +276,16 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         }
     }
 
+    protected void ToggleAutoExitOpen()
+    {
+        EditableSettings.AutoExitOpenEnabled = !EditableSettings.AutoExitOpenEnabled;
+    }
+
+    protected void ToggleAutoCloseAfterPass()
+    {
+        EditableSettings.AutoCloseAfterPassEnabled = !EditableSettings.AutoCloseAfterPassEnabled;
+    }
+
     protected void ToggleParkingSpot(int slotIndex)
     {
         if (slotIndex < 0 || slotIndex >= EditableSettings.ParkingSpotEnabledStates.Count)
@@ -309,6 +325,9 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
                || EditableSettings.ServoOpenDurationMs != originalSettings.ServoOpenDurationMs
                || EditableSettings.ForceGateOpen != originalSettings.ForceGateOpen
                || EditableSettings.ForceGateLock != originalSettings.ForceGateLock
+               || EditableSettings.AutoExitOpenEnabled != originalSettings.AutoExitOpenEnabled
+               || EditableSettings.AutoCloseAfterPassEnabled != originalSettings.AutoCloseAfterPassEnabled
+               || EditableSettings.GatePassageThresholdCm != originalSettings.GatePassageThresholdCm
                || EditableSettings.OccupiedThresholdCm != originalSettings.OccupiedThresholdCm
                || !EditableSettings.ParkingSpotEnabledStates.SequenceEqual(originalSettings.ParkingSpotEnabledStates)
                || EditableSettings.ParkingStatusUpdateIntervalMs != originalSettings.ParkingStatusUpdateIntervalMs

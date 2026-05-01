@@ -12,6 +12,9 @@ public sealed class AdminEditableSettings
         int servoOpenDurationMs,
         bool forceGateOpen,
         bool forceGateLock,
+        bool autoExitOpenEnabled,
+        bool autoCloseAfterPassEnabled,
+        int gatePassageThresholdCm,
         int occupiedThresholdCm,
         IReadOnlyList<bool> parkingSpotEnabledStates,
         int parkingStatusUpdateIntervalMs,
@@ -23,6 +26,9 @@ public sealed class AdminEditableSettings
         ServoOpenDurationMs = servoOpenDurationMs;
         ForceGateOpen = forceGateOpen;
         ForceGateLock = forceGateLock;
+        AutoExitOpenEnabled = autoExitOpenEnabled;
+        AutoCloseAfterPassEnabled = autoCloseAfterPassEnabled;
+        GatePassageThresholdCm = gatePassageThresholdCm;
         OccupiedThresholdCm = occupiedThresholdCm;
         ParkingSpotEnabledStates = [.. parkingSpotEnabledStates];
         ParkingStatusUpdateIntervalMs = parkingStatusUpdateIntervalMs;
@@ -35,6 +41,9 @@ public sealed class AdminEditableSettings
     public int ServoOpenDurationMs { get; set; }
     public bool ForceGateOpen { get; set; }
     public bool ForceGateLock { get; set; }
+    public bool AutoExitOpenEnabled { get; set; }
+    public bool AutoCloseAfterPassEnabled { get; set; }
+    public int GatePassageThresholdCm { get; set; }
     public int OccupiedThresholdCm { get; set; }
     public List<bool> ParkingSpotEnabledStates { get; set; } = [];
     public int ParkingStatusUpdateIntervalMs { get; set; }
@@ -49,6 +58,9 @@ public sealed class AdminEditableSettings
             ServoOpenDurationMs,
             ForceGateOpen,
             ForceGateLock,
+            AutoExitOpenEnabled,
+            AutoCloseAfterPassEnabled,
+            GatePassageThresholdCm,
             OccupiedThresholdCm,
             ParkingSpotEnabledStates,
             ParkingStatusUpdateIntervalMs,

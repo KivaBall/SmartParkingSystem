@@ -38,6 +38,15 @@ public sealed class AdminService(
                 commandService.SetTelemetryIntervalAsync(normalized.ParkingStatusUpdateIntervalMs, cancellationToken),
                 "CONFIG TELEMETRY_MS");
             await EnsureSucceededAsync(
+                commandService.SetAutoExitOpenAsync(normalized.AutoExitOpenEnabled, cancellationToken),
+                "CONFIG AUTO_EXIT_OPEN");
+            await EnsureSucceededAsync(
+                commandService.SetAutoCloseAfterPassAsync(normalized.AutoCloseAfterPassEnabled, cancellationToken),
+                "CONFIG AUTO_CLOSE_AFTER_PASS");
+            await EnsureSucceededAsync(
+                commandService.SetGatePassageThresholdAsync(normalized.GatePassageThresholdCm, cancellationToken),
+                "CONFIG PASSAGE_THRESHOLD_CM");
+            await EnsureSucceededAsync(
                 commandService.SetForceOpenAsync(normalized.ForceGateOpen, cancellationToken),
                 "GATE FORCE_OPEN");
             await EnsureSucceededAsync(
@@ -186,6 +195,7 @@ public sealed class AdminService(
         clone.ServoOpenAngle = Math.Clamp(clone.ServoOpenAngle, 0, 180);
         clone.ServoClosedAngle = Math.Clamp(clone.ServoClosedAngle, 0, 180);
         clone.ServoOpenDurationMs = Math.Max(250, clone.ServoOpenDurationMs);
+        clone.GatePassageThresholdCm = Math.Max(1, clone.GatePassageThresholdCm);
         clone.OccupiedThresholdCm = Math.Max(1, clone.OccupiedThresholdCm);
         clone.ParkingStatusUpdateIntervalMs = Math.Max(250, clone.ParkingStatusUpdateIntervalMs);
 
@@ -215,6 +225,9 @@ public sealed class AdminService(
                 configuration.OpenDurationMs,
                 configuration.ForceOpen,
                 configuration.ForceLock,
+                configuration.AutoExitOpenEnabled,
+                configuration.AutoCloseAfterPassEnabled,
+                configuration.GatePassageThresholdCm,
                 configuration.ThresholdCm,
                 slots,
                 configuration.TelemetryIntervalMs,

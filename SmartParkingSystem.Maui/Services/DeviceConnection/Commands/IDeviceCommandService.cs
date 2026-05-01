@@ -15,6 +15,9 @@ public interface IDeviceCommandService
     Task<DeviceCommandResult> SetOpenDurationAsync(int value, CancellationToken cancellationToken = default);
     Task<DeviceCommandResult> SetThresholdAsync(int value, CancellationToken cancellationToken = default);
     Task<DeviceCommandResult> SetTelemetryIntervalAsync(int value, CancellationToken cancellationToken = default);
+    Task<DeviceCommandResult> SetAutoExitOpenAsync(bool isEnabled, CancellationToken cancellationToken = default);
+    Task<DeviceCommandResult> SetAutoCloseAfterPassAsync(bool isEnabled, CancellationToken cancellationToken = default);
+    Task<DeviceCommandResult> SetGatePassageThresholdAsync(int value, CancellationToken cancellationToken = default);
 
     Task<DeviceCommandResult> SetSlotEnabledAsync(
         int slotNumber,

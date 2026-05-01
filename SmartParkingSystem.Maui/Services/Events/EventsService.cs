@@ -210,6 +210,31 @@ public sealed class EventsService : IEventsService, IDisposable
                 currentValue: current.OpenDurationMs.ToString());
         }
 
+        if (previous.AutoExitOpenEnabled != current.AutoExitOpenEnabled)
+        {
+            AddEvent(
+                EventCategory.Gate,
+                EventKind.GateAutoExitOpenChanged,
+                currentValue: current.AutoExitOpenEnabled ? bool.TrueString : bool.FalseString);
+        }
+
+        if (previous.AutoCloseAfterPassEnabled != current.AutoCloseAfterPassEnabled)
+        {
+            AddEvent(
+                EventCategory.Gate,
+                EventKind.GateAutoCloseAfterPassChanged,
+                currentValue: current.AutoCloseAfterPassEnabled ? bool.TrueString : bool.FalseString);
+        }
+
+        if (previous.GatePassageThresholdCm != current.GatePassageThresholdCm)
+        {
+            AddEvent(
+                EventCategory.Gate,
+                EventKind.GatePassageThresholdChanged,
+                previousValue: previous.GatePassageThresholdCm.ToString(),
+                currentValue: current.GatePassageThresholdCm.ToString());
+        }
+
         if (previous.TelemetryIntervalMs != current.TelemetryIntervalMs)
         {
             AddEvent(

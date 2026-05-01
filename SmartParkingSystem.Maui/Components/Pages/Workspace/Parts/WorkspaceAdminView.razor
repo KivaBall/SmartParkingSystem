@@ -57,184 +57,111 @@
         <section class="@EditableClass" style="@EditableStyle">
             <div class="space-y-4">
                 <div class="grid gap-4 lg:grid-cols-[1fr_1fr]">
-                    <section class="@GateSectionClass" style="@GateSectionStyle">
-                        <div class="mb-8 flex items-center justify-center gap-3">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
-                                <i data-lucide="rows-4"></i>
-                            </div>
-
-                            <div>
-                                <p class="text-base font-semibold text-calm-900">@Texts.GateTitle</p>
-                            </div>
-                        </div>
-
-                        <div class="grid gap-3">
-                            <div class="rounded-md bg-white px-4 py-4">
-                                <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.ServoOpenAngleLabel</p>
-                                <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
-                                       type="number"
-                                       min="0"
-                                       max="180"
-                                       @bind="EditableSettings.ServoOpenAngle"/>
-                            </div>
-
-                            <div class="rounded-md bg-white px-4 py-4">
-                                <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.ServoClosedAngleLabel</p>
-                                <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
-                                       type="number"
-                                       min="0"
-                                       max="180"
-                                       @bind="EditableSettings.ServoClosedAngle"/>
-                            </div>
-
-                            <div class="rounded-md bg-white px-4 py-4">
-                                <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.ServoOpenDurationLabel</p>
-                                <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
-                                       type="number"
-                                       min="250"
-                                       @bind="EditableSettings.ServoOpenDurationMs"/>
-                            </div>
-
-                            <div class="rounded-md bg-white px-4 py-4">
-                                <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
-                                    <div>
-                                        <p class="text-sm font-semibold text-calm-900">@Texts.ForceGateOpenLabel</p>
-                                    </div>
-
-                                    <button class="@GetToggleButtonClass(EditableSettings.ForceGateOpen)"
-                                            type="button"
-                                            @onclick="ToggleForceGateOpen">
-                                        <span>@GetToggleButtonLabel(EditableSettings.ForceGateOpen)</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="rounded-md bg-white px-4 py-4">
-                                <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
-                                    <div>
-                                        <p class="text-sm font-semibold text-calm-900">@Texts.ForceGateLockLabel</p>
-                                    </div>
-
-                                    <button class="@GetToggleButtonClass(EditableSettings.ForceGateLock)"
-                                            type="button"
-                                            @onclick="ToggleForceGateLock">
-                                        <span>@GetToggleButtonLabel(EditableSettings.ForceGateLock)</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="@ParkingSectionClass" style="@ParkingSectionStyle">
-                        <div class="mb-8 flex items-center justify-center gap-3">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
-                                <i data-lucide="square-parking"></i>
-                            </div>
-
-                            <div>
-                                <p class="text-base font-semibold text-calm-900">@Texts.ParkingTitle</p>
-                            </div>
-                        </div>
-
-                        <div class="grid gap-3">
-                            <div class="rounded-md bg-white px-4 py-4">
-                                <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.OccupiedThresholdLabel</p>
-                                <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
-                                       type="number"
-                                       min="1"
-                                       @bind="EditableSettings.OccupiedThresholdCm"/>
-                            </div>
-
-                            <div class="rounded-md bg-white px-4 py-4">
-                                <p class="mb-3 text-sm font-semibold text-calm-500">@Texts.DisabledParkingSlotsLabel</p>
-
-                                <div class="grid gap-3 sm:grid-cols-[1fr_1fr]">
-                                    @for (var slotIndex = 0; slotIndex < EditableSettings.ParkingSpotEnabledStates.Count; slotIndex++)
-                                    {
-                                        var currentSlotIndex = slotIndex;
-                                        var enabled = EditableSettings.ParkingSpotEnabledStates[currentSlotIndex];
-
-                                        <button class="@GetParkingToggleClass(!enabled)"
-                                                type="button"
-                                                @onclick="() => ToggleParkingSpot(currentSlotIndex)">
-                                            <span>@GetParkingSpotLabel(currentSlotIndex + 1)</span>
-                                            <span class="text-sm font-semibold">@GetToggleButtonLabel(enabled)</span>
-                                        </button>
-                                    }
-                                </div>
-                            </div>
-
-                            <div class="rounded-md bg-white px-4 py-4">
-                                <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
-                                    <div>
-                                        <p class="text-sm font-semibold text-calm-900">@SettingsTexts.EditParkingLabel</p>
-                                    </div>
-
-                                    <button class="inline-flex min-h-12 items-center justify-center rounded-md px-4 py-3 text-sm font-semibold transition-all duration-500 ease-out @(EditParkingEnabled ? "bg-brand-200 text-calm-900 hover:bg-brand-400" : "bg-white text-calm-700 hover:bg-calm-50")"
-                                            type="button"
-                                            @onclick="ToggleEditParking">
-                                        <span>@(EditParkingEnabled ? SettingsTexts.EnabledLabel : SettingsTexts.DisabledLabel)</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-
-                <div class="grid gap-4 lg:grid-cols-[1fr_1fr]">
-                    <section class="@CameraSectionClass" style="@CameraSectionStyle">
-                        <div class="mb-8 flex items-center justify-center gap-3">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
-                                <i data-lucide="camera"></i>
-                            </div>
-
-                            <div>
-                                <p class="text-base font-semibold text-calm-900">@Texts.CameraTitle</p>
-                            </div>
-                        </div>
-
-                        <div class="grid gap-3">
-                            <div class="rounded-md bg-white px-4 py-4">
-                                <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
-                                    <div>
-                                        <p class="text-sm font-semibold text-calm-900">@Texts.CameraAutoSnapshotLabel</p>
-                                    </div>
-
-                                    <button class="@GetToggleButtonClass(CameraAutoSnapshotEnabled)"
-                                            type="button"
-                                            @onclick="ToggleCameraAutoSnapshot">
-                                        <span>@GetToggleButtonLabel(CameraAutoSnapshotEnabled)</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="rounded-md bg-white px-4 py-4">
-                                <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.CameraAutoSnapshotDelayLabel</p>
-                                <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
-                                       type="number"
-                                       min="250"
-                                       max="30000"
-                                       step="250"
-                                       @bind="CameraAutoSnapshotDelayMs"/>
-                            </div>
-
-                            <div class="rounded-md bg-white px-4 py-4">
-                                <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
-                                    <div>
-                                        <p class="text-sm font-semibold text-calm-900">@Texts.KeepCameraEnabledOutsideGateLabel</p>
-                                    </div>
-
-                                    <button class="@GetToggleButtonClass(KeepCameraEnabledOutsideGate)"
-                                            type="button"
-                                            @onclick="ToggleKeepCameraEnabledOutsideGate">
-                                        <span>@GetToggleButtonLabel(KeepCameraEnabledOutsideGate)</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
                     <div class="space-y-4">
+                        <section class="@GateSectionClass" style="@GateSectionStyle">
+                            <div class="mb-8 flex items-center justify-center gap-3">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
+                                    <i data-lucide="rows-4"></i>
+                                </div>
+
+                                <div>
+                                    <p class="text-base font-semibold text-calm-900">@Texts.GateTitle</p>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-3">
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.ServoOpenAngleLabel</p>
+                                    <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                                           type="number"
+                                           min="0"
+                                           max="180"
+                                           @bind="EditableSettings.ServoOpenAngle"/>
+                                </div>
+
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.ServoClosedAngleLabel</p>
+                                    <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                                           type="number"
+                                           min="0"
+                                           max="180"
+                                           @bind="EditableSettings.ServoClosedAngle"/>
+                                </div>
+
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.ServoOpenDurationLabel</p>
+                                    <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                                           type="number"
+                                           min="250"
+                                           @bind="EditableSettings.ServoOpenDurationMs"/>
+                                </div>
+
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
+                                        <div>
+                                            <p class="text-sm font-semibold text-calm-900">@Texts.ForceGateOpenLabel</p>
+                                        </div>
+
+                                        <button class="@GetToggleButtonClass(EditableSettings.ForceGateOpen)"
+                                                type="button"
+                                                @onclick="ToggleForceGateOpen">
+                                            <span>@GetToggleButtonLabel(EditableSettings.ForceGateOpen)</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
+                                        <div>
+                                            <p class="text-sm font-semibold text-calm-900">@Texts.ForceGateLockLabel</p>
+                                        </div>
+
+                                        <button class="@GetToggleButtonClass(EditableSettings.ForceGateLock)"
+                                                type="button"
+                                                @onclick="ToggleForceGateLock">
+                                            <span>@GetToggleButtonLabel(EditableSettings.ForceGateLock)</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
+                                        <div>
+                                            <p class="text-sm font-semibold text-calm-900">@Texts.AutoExitOpenLabel</p>
+                                        </div>
+
+                                        <button class="@GetToggleButtonClass(EditableSettings.AutoExitOpenEnabled)"
+                                                type="button"
+                                                @onclick="ToggleAutoExitOpen">
+                                            <span>@GetToggleButtonLabel(EditableSettings.AutoExitOpenEnabled)</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
+                                        <div>
+                                            <p class="text-sm font-semibold text-calm-900">@Texts.AutoCloseAfterPassLabel</p>
+                                        </div>
+
+                                        <button class="@GetToggleButtonClass(EditableSettings.AutoCloseAfterPassEnabled)"
+                                                type="button"
+                                                @onclick="ToggleAutoCloseAfterPass">
+                                            <span>@GetToggleButtonLabel(EditableSettings.AutoCloseAfterPassEnabled)</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.GatePassageThresholdLabel</p>
+                                    <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                                           type="number"
+                                           min="1"
+                                           @bind="EditableSettings.GatePassageThresholdCm"/>
+                                </div>
+                            </div>
+                        </section>
+
                         <section class="@CardsSectionClass" style="@CardsSectionStyle">
                             <div class="mb-8 flex items-center justify-center gap-3">
                                 <div class="flex h-10 w-10 items-center justify-center rounded-md bg-brand-100/80 text-calm-700">
@@ -257,6 +184,115 @@
                                     <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.BlockedCardsLabel</p>
                                     <textarea class="min-h-16 h-full w-full resize-none rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
                                               @bind="EditableSettings.BlockedCardsText"></textarea>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="space-y-4">
+                        <section class="@ParkingSectionClass" style="@ParkingSectionStyle">
+                            <div class="mb-8 flex items-center justify-center gap-3">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
+                                    <i data-lucide="square-parking"></i>
+                                </div>
+
+                                <div>
+                                    <p class="text-base font-semibold text-calm-900">@Texts.ParkingTitle</p>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-3">
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.OccupiedThresholdLabel</p>
+                                    <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                                           type="number"
+                                           min="1"
+                                           @bind="EditableSettings.OccupiedThresholdCm"/>
+                                </div>
+
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <p class="mb-3 text-sm font-semibold text-calm-500">@Texts.DisabledParkingSlotsLabel</p>
+
+                                    <div class="grid gap-3 sm:grid-cols-[1fr_1fr]">
+                                        @for (var slotIndex = 0; slotIndex < EditableSettings.ParkingSpotEnabledStates.Count; slotIndex++)
+                                        {
+                                            var currentSlotIndex = slotIndex;
+                                            var enabled = EditableSettings.ParkingSpotEnabledStates[currentSlotIndex];
+
+                                            <button class="@GetParkingToggleClass(!enabled)"
+                                                    type="button"
+                                                    @onclick="() => ToggleParkingSpot(currentSlotIndex)">
+                                                <span>@GetParkingSpotLabel(currentSlotIndex + 1)</span>
+                                                <span class="text-sm font-semibold">@GetToggleButtonLabel(enabled)</span>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
+                                        <div>
+                                            <p class="text-sm font-semibold text-calm-900">@SettingsTexts.EditParkingLabel</p>
+                                        </div>
+
+                                        <button class="inline-flex min-h-12 items-center justify-center rounded-md px-4 py-3 text-sm font-semibold transition-all duration-500 ease-out @(EditParkingEnabled ? "bg-brand-200 text-calm-900 hover:bg-brand-400" : "bg-white text-calm-700 hover:bg-calm-50")"
+                                                type="button"
+                                                @onclick="ToggleEditParking">
+                                            <span>@(EditParkingEnabled ? SettingsTexts.EnabledLabel : SettingsTexts.DisabledLabel)</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="@CameraSectionClass" style="@CameraSectionStyle">
+                            <div class="mb-8 flex items-center justify-center gap-3">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/85 text-calm-700">
+                                    <i data-lucide="camera"></i>
+                                </div>
+
+                                <div>
+                                    <p class="text-base font-semibold text-calm-900">@Texts.CameraTitle</p>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-3">
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
+                                        <div>
+                                            <p class="text-sm font-semibold text-calm-900">@Texts.CameraAutoSnapshotLabel</p>
+                                        </div>
+
+                                        <button class="@GetToggleButtonClass(CameraAutoSnapshotEnabled)"
+                                                type="button"
+                                                @onclick="ToggleCameraAutoSnapshot">
+                                            <span>@GetToggleButtonLabel(CameraAutoSnapshotEnabled)</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.CameraAutoSnapshotDelayLabel</p>
+                                    <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                                           type="number"
+                                           min="250"
+                                           max="30000"
+                                           step="250"
+                                           @bind="CameraAutoSnapshotDelayMs"/>
+                                </div>
+
+                                <div class="rounded-md bg-white px-4 py-4">
+                                    <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
+                                        <div>
+                                            <p class="text-sm font-semibold text-calm-900">@Texts.KeepCameraEnabledOutsideGateLabel</p>
+                                        </div>
+
+                                        <button class="@GetToggleButtonClass(KeepCameraEnabledOutsideGate)"
+                                                type="button"
+                                                @onclick="ToggleKeepCameraEnabledOutsideGate">
+                                            <span>@GetToggleButtonLabel(KeepCameraEnabledOutsideGate)</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </section>

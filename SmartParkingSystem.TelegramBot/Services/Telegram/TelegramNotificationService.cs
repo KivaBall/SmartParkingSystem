@@ -126,6 +126,9 @@ public sealed class TelegramNotificationService(
             EventKind.GateOpenAngleChanged
                 or EventKind.GateClosedAngleChanged
                 or EventKind.GateOpenDurationChanged
+                or EventKind.GateAutoExitOpenChanged
+                or EventKind.GateAutoCloseAfterPassChanged
+                or EventKind.GatePassageThresholdChanged
                 or EventKind.ConnectionIntervalChanged
                 or EventKind.ParkingThresholdChanged
                 or EventKind.AllowedCardsChanged

@@ -46,6 +46,9 @@ internal static class DeviceProtocolParser
                || !TryGetRequiredInt(values, "telemetry_ms", out var telemetryMs)
                || !TryGetRequiredBool(values, "force_open", out var forceOpen)
                || !TryGetRequiredBool(values, "force_lock", out var forceLock)
+               || !TryGetRequiredBool(values, "auto_exit_open", out var autoExitOpen)
+               || !TryGetRequiredBool(values, "auto_close_after_pass", out var autoCloseAfterPass)
+               || !TryGetRequiredInt(values, "passage_threshold_cm", out var passageThresholdCm)
             ? null
             : new DeviceControllerConfiguration(
                 openAngle,
@@ -55,6 +58,9 @@ internal static class DeviceProtocolParser
                 telemetryMs,
                 forceOpen,
                 forceLock,
+                autoExitOpen,
+                autoCloseAfterPass,
+                passageThresholdCm,
                 Enumerable.Range(1, slotEnabled.Count)
                     .Select(slotEnabled.GetValueOrDefault)
                     .ToArray(),
@@ -119,6 +125,8 @@ internal static class DeviceProtocolParser
                || !TryGetRequiredInt(values, "open_duration_ms", out var openDurationMs)
                || !TryGetRequiredInt(values, "threshold_cm", out var thresholdCm)
                || !TryGetRequiredInt(values, "telemetry_ms", out var telemetryMs)
+               || !TryGetRequiredBool(values, "passage_occupied", out var passageOccupied)
+               || !TryGetRequiredInt(values, "passage_distance_cm", out var passageDistanceCm)
             ? null
             : new DeviceControllerSnapshot(
                 mode,
@@ -130,6 +138,8 @@ internal static class DeviceProtocolParser
                 openDurationMs,
                 thresholdCm,
                 telemetryMs,
+                passageOccupied,
+                passageDistanceCm,
                 displayText,
                 displayForced,
                 slots,
