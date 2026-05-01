@@ -110,6 +110,37 @@ public sealed class DeviceCommandService(
             cancellationToken);
     }
 
+    public Task<DeviceCommandResult> SetAutoExitOpenAsync(bool isEnabled, CancellationToken cancellationToken = default)
+    {
+        return SendCommandAsync(
+            $"CONFIG AUTO_EXIT_OPEN {(isEnabled ? "ON" : "OFF")}",
+            "CONFIG",
+            "OK|CONFIG|AUTO_EXIT_OPEN_UPDATED",
+            cancellationToken,
+            ["ERR|CONFIG|INVALID_AUTO_EXIT_OPEN_VALUE"]);
+    }
+
+    public Task<DeviceCommandResult> SetAutoCloseAfterPassAsync(
+        bool isEnabled,
+        CancellationToken cancellationToken = default)
+    {
+        return SendCommandAsync(
+            $"CONFIG AUTO_CLOSE_AFTER_PASS {(isEnabled ? "ON" : "OFF")}",
+            "CONFIG",
+            "OK|CONFIG|AUTO_CLOSE_AFTER_PASS_UPDATED",
+            cancellationToken,
+            ["ERR|CONFIG|INVALID_AUTO_CLOSE_AFTER_PASS_VALUE"]);
+    }
+
+    public Task<DeviceCommandResult> SetGatePassageThresholdAsync(int value, CancellationToken cancellationToken = default)
+    {
+        return SendCommandAsync(
+            $"CONFIG PASSAGE_THRESHOLD_CM {value}",
+            "CONFIG",
+            "OK|CONFIG|PASSAGE_THRESHOLD_UPDATED",
+            cancellationToken);
+    }
+
     public Task<DeviceCommandResult> SetSlotEnabledAsync(
         int slotNumber,
         bool isEnabled,

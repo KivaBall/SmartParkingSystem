@@ -10,6 +10,8 @@ public sealed record DeviceControllerSnapshot(
     int OpenDurationMs,
     int ThresholdCm,
     int TelemetryIntervalMs,
+    bool GatePassageOccupied,
+    int GatePassageDistanceCm,
     string DisplayText,
     bool DisplayForced,
     IReadOnlyList<DeviceSlotSnapshot> Slots,

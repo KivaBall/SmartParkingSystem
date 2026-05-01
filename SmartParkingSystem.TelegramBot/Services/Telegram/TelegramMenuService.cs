@@ -552,6 +552,9 @@ public sealed class TelegramMenuService
             EventKind.GateOpenAngleChanged => Localize(language, "Кут відкриття", "Open angle"),
             EventKind.GateClosedAngleChanged => Localize(language, "Кут закриття", "Closed angle"),
             EventKind.GateOpenDurationChanged => Localize(language, "Тривалість відкриття", "Open duration"),
+            EventKind.GateAutoExitOpenChanged => Localize(language, "Автовідкриття на виїзд", "Auto-open on exit"),
+            EventKind.GateAutoCloseAfterPassChanged => Localize(language, "Автозакриття після проїзду", "Auto-close after passage"),
+            EventKind.GatePassageThresholdChanged => Localize(language, "Поріг проїзду", "Passage threshold"),
             EventKind.MonitorForceModeChanged => Localize(language, "Примусовий режим", "Forced mode"),
             EventKind.MonitorTextChanged => Localize(language, "Текст", "Text"),
             EventKind.MonitorTemplateChanged => Localize(language, "Шаблон", "Template"),
@@ -618,6 +621,9 @@ public sealed class TelegramMenuService
         return kind is EventKind.GateOpenAngleChanged
             or EventKind.GateClosedAngleChanged
             or EventKind.GateOpenDurationChanged
+            or EventKind.GateAutoExitOpenChanged
+            or EventKind.GateAutoCloseAfterPassChanged
+            or EventKind.GatePassageThresholdChanged
             or EventKind.ConnectionIntervalChanged
             or EventKind.ParkingThresholdChanged
             or EventKind.AllowedCardsChanged
@@ -636,6 +642,9 @@ public sealed class TelegramMenuService
             EventKind.GateOpenAngleChanged => Localize(language, "Кут відкриття воріт", "Gate open angle"),
             EventKind.GateClosedAngleChanged => Localize(language, "Кут закриття воріт", "Gate closed angle"),
             EventKind.GateOpenDurationChanged => Localize(language, "Тривалість відкриття воріт", "Gate open duration"),
+            EventKind.GateAutoExitOpenChanged => Localize(language, "Автовідкриття на виїзд", "Auto-open on exit"),
+            EventKind.GateAutoCloseAfterPassChanged => Localize(language, "Автозакриття після проїзду", "Auto-close after passage"),
+            EventKind.GatePassageThresholdChanged => Localize(language, "Поріг датчика проїзду", "Gate passage threshold"),
             EventKind.MonitorForceModeChanged => Localize(language, "Режим монітора", "Monitor mode"),
             EventKind.MonitorTextChanged => Localize(language, "Текст монітора", "Monitor text"),
             EventKind.MonitorTemplateChanged => Localize(language, "Шаблон монітора", "Monitor template"),
