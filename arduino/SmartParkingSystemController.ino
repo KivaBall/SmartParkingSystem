@@ -7,11 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define ENABLE_LCD 0
-
-#if ENABLE_LCD
 #include <LiquidCrystal_I2C.h>
-#endif
 
 // -----------------------------------------------------------------------------
 // Smart Parking System Controller
@@ -61,9 +57,7 @@ MFRC522 rfid(SS_PIN, RST_PIN);
 // -----------------------------------------------------------------------------
 // LCD 16x2 по I2C
 // -----------------------------------------------------------------------------
-#if ENABLE_LCD
 LiquidCrystal_I2C lcd(0x27, 16, 2);
-#endif
 
 // -----------------------------------------------------------------------------
 // Servo воріт
@@ -207,10 +201,8 @@ size_t rxIndex = 0;
 // -----------------------------------------------------------------------------
 // Поточний вміст LCD
 // -----------------------------------------------------------------------------
-#if ENABLE_LCD
 char lcdLine1[17] = "Scan Card";
 char lcdLine2[17] = "";
-#endif
 
 // -----------------------------------------------------------------------------
 // Оголошення функцій
@@ -284,10 +276,8 @@ void setup()
     rfid.PCD_Init();
 
     // Ініціалізація LCD.
-#if ENABLE_LCD
     lcd.init();
     lcd.backlight();
-#endif
 
     // Підключення сервоприводу воріт.
     gateServo.attach(SERVO_PIN);
@@ -671,9 +661,6 @@ void updateParkingStates()
 // Якщо тимчасове повідомлення вже закінчилося - повертає стандартний idle-екран.
 void updateLcd()
 {
-#if !ENABLE_LCD
-    return;
-#else
     if (millis() > messageVisibleUntil)
     {
         uint8_t freeCount = 0;
@@ -698,7 +685,6 @@ void updateLcd()
     lcd.print("                ");
     lcd.setCursor(0, 1);
     lcd.print(lcdLine2);
-#endif
 }
 
 // -----------------------------------------------------------------------------
@@ -707,17 +693,11 @@ void updateLcd()
 // Встановлює тимчасовий текст на LCD.
 void showMessage(const char *line1, const char *line2)
 {
-#if !ENABLE_LCD
-    (void)line1;
-    (void)line2;
-    return;
-#else
     strncpy(lcdLine1, line1, sizeof(lcdLine1) - 1);
     strncpy(lcdLine2, line2, sizeof(lcdLine2) - 1);
     lcdLine1[sizeof(lcdLine1) - 1] = '\0';
     lcdLine2[sizeof(lcdLine2) - 1] = '\0';
     messageVisibleUntil = millis() + LCD_MESSAGE_DURATION_MS;
-#endif
 }
 
 // -----------------------------------------------------------------------------
@@ -783,11 +763,7 @@ void sendHello()
 void sendProfile()
 {
     beginProtocolFrame();
-#if ENABLE_LCD
     btSerial.print(F("PROFILE|board=ATmega328P|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05|slots=6"));
-#else
-    btSerial.print(F("PROFILE|board=ATmega328P|rfid=MFRC522|lcd=DISABLED|gate=SERVO|transport=HC05|slots=6"));
-#endif
     endProtocolFrame();
 }
 
