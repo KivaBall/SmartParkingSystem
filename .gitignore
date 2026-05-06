@@ -9,3 +9,4 @@ riderModule.iml
 build-check-*/
 SmartParkingSystem.TelegramBot/data/
 telegram-bot-run*.log
+release-artifacts/
