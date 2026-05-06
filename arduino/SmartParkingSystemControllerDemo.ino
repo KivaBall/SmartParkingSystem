@@ -735,16 +735,21 @@ void updateLcd()
     else if (millis() > messageVisibleUntil)
     {
         uint8_t freeCount = 0;
+        uint8_t enabledCount = 0;
         for (uint8_t i = 0; i < SLOT_COUNT; i++)
         {
-            if (isSlotEnabled(i) && !slotOccupied[i])
+            if (isSlotEnabled(i))
             {
-                freeCount++;
+                enabledCount++;
+                if (!slotOccupied[i])
+                {
+                    freeCount++;
+                }
             }
         }
 
         snprintf(lcdLine1, sizeof(lcdLine1), "Scan Card");
-        snprintf(lcdLine2, sizeof(lcdLine2), "Free:%u/%u", freeCount, SLOT_COUNT);
+        snprintf(lcdLine2, sizeof(lcdLine2), "Free:%u/%u", freeCount, enabledCount);
     }
 
     lcd.setCursor(0, 0);
