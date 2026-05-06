@@ -661,7 +661,12 @@ void updateParkingStates()
 // Якщо тимчасове повідомлення вже закінчилося - повертає стандартний idle-екран.
 void updateLcd()
 {
-    if (millis() > messageVisibleUntil)
+    if (config.displayForceEnabled)
+    {
+        setDisplayText(lcdLine1, config.displayForcedText);
+        lcdLine2[0] = '\0';
+    }
+    else if (millis() > messageVisibleUntil)
     {
         uint8_t freeCount = 0;
         for (uint8_t i = 0; i < SLOT_COUNT; i++)
