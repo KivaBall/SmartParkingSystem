@@ -91,7 +91,7 @@ constexpr uint16_t CONFIG_SIGNATURE = 0x5350;
 constexpr uint8_t CONFIG_VERSION = 5;
 constexpr unsigned long LCD_MESSAGE_DURATION_MS = 3000UL;
 constexpr size_t RX_BUFFER_SIZE = 40;
-constexpr uint8_t ALL_SLOTS_ENABLED_MASK = (1 << SLOT_COUNT) - 1;
+constexpr uint8_t DEFAULT_SLOT_ENABLED_MASK = 0x07;
 constexpr char PROTOCOL_FRAME_MARKER[] = "|||";
 constexpr uint8_t PROTOCOL_FRAME_MARKER_LENGTH = 3;
 constexpr bool DEMO_MODE = true;
@@ -389,7 +389,7 @@ void setDefaultConfig()
     config.autoCloseAfterPassEnabled = 1;
     config.gatePassageThresholdCm = 20;
 
-    config.slotEnabledMask = ALL_SLOTS_ENABLED_MASK;
+    config.slotEnabledMask = DEFAULT_SLOT_ENABLED_MASK;
     config.displayForceEnabled = 0;
     setDisplayText(config.displayForcedText, "FORCED TEXT");
     setDisplayText(config.displayDefaultText, "SMART PARKING");
