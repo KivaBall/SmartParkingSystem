@@ -24,6 +24,8 @@ public interface IDeviceCommandService
         bool isEnabled,
         CancellationToken cancellationToken = default);
 
+    Task<DeviceCommandResult> ShowRouteToSlotAsync(int slotNumber, CancellationToken cancellationToken = default);
+    Task<DeviceCommandResult> ClearRouteAsync(CancellationToken cancellationToken = default);
     Task<DeviceCommandResult> AddAllowedCardAsync(string uid, CancellationToken cancellationToken = default);
     Task<DeviceCommandResult> RemoveAllowedCardAsync(string uid, CancellationToken cancellationToken = default);
     Task<DeviceCommandResult> ClearAllowedCardsAsync(CancellationToken cancellationToken = default);

@@ -72,7 +72,8 @@ internal static class DeviceProtocolParser
                 GetDisplayText(displayTexts, "INVALID"),
                 GetDisplayText(displayTexts, "LOCKED"),
                 allowedCards,
-                blockedCards);
+                blockedCards,
+                TryGetOptionalInt(values, "route_slot"));
     }
 
     public static DeviceControllerConfiguration? TryBuildConfiguration(
@@ -144,7 +145,10 @@ internal static class DeviceProtocolParser
                 displayForced,
                 slots,
                 allowedCount,
-                blockedCount);
+                blockedCount,
+                GetString(values, "last_access_uid"),
+                GetString(values, "last_access_result"),
+                TryGetOptionalInt(values, "last_access_counter"));
     }
 
     public static DeviceControllerSnapshot? TryBuildSnapshot(
@@ -359,6 +363,13 @@ internal static class DeviceProtocolParser
     {
         value = 0;
         return values.TryGetValue(key, out var rawValue) && int.TryParse(rawValue, out value);
+    }
+
+    private static int TryGetOptionalInt(Dictionary<string, string> values, string key)
+    {
+        return values.TryGetValue(key, out var rawValue) && int.TryParse(rawValue, out var value)
+            ? value
+            : 0;
     }
 
     private static bool TryGetRequiredLong(

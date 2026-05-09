@@ -128,6 +128,26 @@ else
                         </div>
                     </div>
 
+                    <div class="shrink-0 rounded-md bg-white/90 p-5 text-calm-900">
+                        <div class="flex h-full flex-col justify-center gap-3">
+                            <button class="inline-flex h-12 w-12 items-center justify-center rounded-md bg-mint-100 text-calm-900 transition-all duration-500 ease-out hover:bg-mint-200 disabled:cursor-default disabled:opacity-50"
+                                    type="button"
+                                    aria-label="Show LED route"
+                                    disabled="@(!CanShowRouteToSelectedSlot)"
+                                    @onclick="ShowRouteToSelectedSlotAsync">
+                                <i data-lucide="route"></i>
+                            </button>
+
+                            <button class="inline-flex h-12 w-12 items-center justify-center rounded-md bg-warm-100 text-calm-900 transition-all duration-500 ease-out hover:bg-warm-200 disabled:cursor-default disabled:opacity-50"
+                                    type="button"
+                                    aria-label="Clear LED route"
+                                    disabled="@IsBusy"
+                                    @onclick="ClearRouteAsync">
+                                <i data-lucide="route-off"></i>
+                            </button>
+                        </div>
+                    </div>
+
                     @if (EditParkingEnabled)
                     {
                         <div class="shrink-0 rounded-md bg-white/90 p-5 text-calm-900">

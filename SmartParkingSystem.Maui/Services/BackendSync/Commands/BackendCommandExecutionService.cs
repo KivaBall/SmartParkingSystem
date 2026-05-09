@@ -27,6 +27,11 @@ public sealed class BackendCommandExecutionService(
                 BackendCommandKind.ToggleParkingSlot => await ToggleParkingSlotAsync(
                     request.Argument,
                     cancellationToken),
+                BackendCommandKind.ShowParkingRoute => await ShowParkingRouteAsync(
+                    request.Argument,
+                    cancellationToken),
+                BackendCommandKind.ClearParkingRoute => await ClearParkingRouteAsync(cancellationToken),
+                BackendCommandKind.ShowSmartParkingRoute => await ShowSmartParkingRouteAsync(cancellationToken),
                 _ => "Unsupported command."
             };
 
@@ -102,5 +107,53 @@ public sealed class BackendCommandExecutionService(
             ParkingSlotState.Occupied => $"Parking slot {targetSlot.Label} enabled and occupied.",
             _ => $"Parking slot {targetSlot.Label} updated."
         };
+    }
+
+    private async Task<string> ShowParkingRouteAsync(string? slotId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(slotId))
+        {
+            throw new InvalidOperationException("Parking slot id was not provided.");
+        }
+
+        await parkingService.ShowRouteToSlotAsync(slotId, cancellationToken);
+        return $"Parking route to {slotId} enabled.";
+    }
+
+    private async Task<string> ClearParkingRouteAsync(CancellationToken cancellationToken)
+    {
+        await parkingService.ClearRouteAsync(cancellationToken);
+        return "Parking route cleared.";
+    }
+
+    private async Task<string> ShowSmartParkingRouteAsync(CancellationToken cancellationToken)
+    {
+        var slots = await parkingService.GetSlotsAsync(cancellationToken);
+        var targetSlot = slots
+            .Where(slot => slot.State == ParkingSlotState.Free)
+            .Select(slot => new
+            {
+                Slot = slot,
+                Number = ParseSlotNumber(slot.Id)
+            })
+            .Where(item => item.Number is >= 1 and <= 3)
+            .OrderBy(item => item.Number)
+            .FirstOrDefault()
+            ?.Slot;
+
+        if (targetSlot is null)
+        {
+            return "No free physical parking route slot is available.";
+        }
+
+        await parkingService.ShowRouteToSlotAsync(targetSlot.Id, cancellationToken);
+        return $"Smart parking route to {targetSlot.Label} enabled.";
+    }
+
+    private static int? ParseSlotNumber(string slotId)
+    {
+        return slotId.Length >= 2 && slotId[0] == 'P' && int.TryParse(slotId[1..], out var number)
+            ? number
+            : null;
     }
 }

@@ -348,6 +348,53 @@ public sealed class TelegramBotUpdateHandler(
             return;
         }
 
+        if (TryParseParkingRoute(data, out slotId))
+        {
+            if (!settings.BotEnabled)
+            {
+                await apiClient.AnswerCallbackQueryAsync(
+                    callback.Id,
+                    menuService.BuildBotDisabledText(settings.Language ?? TelegramChatLanguage.Ukrainian),
+                    cancellationToken);
+                await ShowMainMenuAsync(chatId, messageId, settings, cancellationToken);
+                return;
+            }
+
+            await HandleBackendCommandAsync(
+                callback.Id,
+                chatId,
+                messageId,
+                BackendCommandKind.ShowParkingRoute,
+                settings,
+                cancellationToken,
+                slotId);
+            return;
+        }
+
+        if (data == "cmd:parking:route-clear")
+        {
+            await HandleBackendCommandAsync(
+                callback.Id,
+                chatId,
+                messageId,
+                BackendCommandKind.ClearParkingRoute,
+                settings,
+                cancellationToken);
+            return;
+        }
+
+        if (data == "cmd:parking:route-smart")
+        {
+            await HandleBackendCommandAsync(
+                callback.Id,
+                chatId,
+                messageId,
+                BackendCommandKind.ShowSmartParkingRoute,
+                settings,
+                cancellationToken);
+            return;
+        }
+
         await apiClient.AnswerCallbackQueryAsync(callback.Id, null, cancellationToken);
         await ShowMainMenuAsync(chatId, messageId, settings, cancellationToken);
     }
@@ -434,7 +481,10 @@ public sealed class TelegramBotUpdateHandler(
         var snapshot = deviceStateCache.CurrentSnapshot
                        ?? await deviceStateStore.GetLatestSnapshotAsync(cancellationToken);
 
-        var menu = menuService.BuildParkingSlotsMenu(snapshot?.ParkingSlots ?? [], language);
+        var menu = menuService.BuildParkingSlotsMenu(
+            snapshot?.ParkingSlots ?? [],
+            snapshot?.Session?.Configuration.ActiveRouteSlot ?? 0,
+            language);
         await ShowMenuAsync(chatId, messageId, menu.Text, menu.Markup, cancellationToken);
     }
 
@@ -544,6 +594,25 @@ public sealed class TelegramBotUpdateHandler(
     {
         slotId = null;
         const string prefix = "cmd:parking:toggle:";
+        if (!data.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var parsedSlotId = data[prefix.Length..].Trim();
+        if (string.IsNullOrWhiteSpace(parsedSlotId))
+        {
+            return false;
+        }
+
+        slotId = parsedSlotId;
+        return true;
+    }
+
+    private static bool TryParseParkingRoute(string data, out string? slotId)
+    {
+        slotId = null;
+        const string prefix = "cmd:parking:route:";
         if (!data.StartsWith(prefix, StringComparison.Ordinal))
         {
             return false;

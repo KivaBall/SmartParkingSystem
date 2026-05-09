@@ -132,7 +132,9 @@ public sealed class DeviceCommandService(
             ["ERR|CONFIG|INVALID_AUTO_CLOSE_AFTER_PASS_VALUE"]);
     }
 
-    public Task<DeviceCommandResult> SetGatePassageThresholdAsync(int value, CancellationToken cancellationToken = default)
+    public Task<DeviceCommandResult> SetGatePassageThresholdAsync(
+        int value,
+        CancellationToken cancellationToken = default)
     {
         return SendCommandAsync(
             $"CONFIG PASSAGE_THRESHOLD_CM {value}",
@@ -157,6 +159,38 @@ public sealed class DeviceCommandService(
             isEnabled ? "OK|PARKING|SLOT_ENABLED" : "OK|PARKING|SLOT_DISABLED",
             cancellationToken,
             ["ERR|PARKING|INVALID_COMMAND", "ERR|PARKING|INVALID_SLOT", "ERR|PARKING|UNKNOWN_ACTION"]);
+    }
+
+    public Task<DeviceCommandResult> ShowRouteToSlotAsync(
+        int slotNumber,
+        CancellationToken cancellationToken = default)
+    {
+        if (slotNumber <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(slotNumber), "Slot number must be greater than zero.");
+        }
+
+        return SendCommandAsync(
+            $"PARKING ROUTE {slotNumber}",
+            "PARKING",
+            "OK|PARKING|ROUTE_ENABLED",
+            cancellationToken,
+            [
+                "ERR|PARKING|INVALID_COMMAND",
+                "ERR|PARKING|INVALID_SLOT",
+                "ERR|PARKING|ROUTE_SLOT_HAS_NO_STRIP",
+                "ERR|PARKING|UNKNOWN_ACTION"
+            ]);
+    }
+
+    public Task<DeviceCommandResult> ClearRouteAsync(CancellationToken cancellationToken = default)
+    {
+        return SendCommandAsync(
+            "PARKING ROUTE_CLEAR",
+            "PARKING",
+            "OK|PARKING|ROUTE_CLEARED",
+            cancellationToken,
+            ["ERR|PARKING|INVALID_COMMAND", "ERR|PARKING|UNKNOWN_ACTION"]);
     }
 
     public Task<DeviceCommandResult> AddAllowedCardAsync(string uid, CancellationToken cancellationToken = default)
