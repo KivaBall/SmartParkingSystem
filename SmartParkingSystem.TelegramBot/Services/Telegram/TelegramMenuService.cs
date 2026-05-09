@@ -192,6 +192,7 @@ public sealed class TelegramMenuService
 
     public (string Text, TelegramInlineKeyboardMarkup Markup) BuildParkingSlotsMenu(
         IReadOnlyList<ParkingSlotSnapshot> parkingSlots,
+        int activeRouteSlot,
         TelegramChatLanguage language)
     {
         if (parkingSlots.Count == 0)
@@ -216,15 +217,31 @@ public sealed class TelegramMenuService
 
         foreach (var slot in parkingSlots.OrderBy(static item => item.Label, StringComparer.OrdinalIgnoreCase))
         {
+            var routeActive = TryParseSlotNumber(slot.Id, out var slotNumber) && slotNumber == activeRouteSlot;
             rows.Add(
             [
                 new TelegramInlineKeyboardButton(
                     $"{GetParkingSlotEmoji(slot.State)} {slot.Label} · {LocalizeParkingSlotFloor(slot.Floor, language)
                     } · {LocalizeParkingSlotState(slot.State, language)
                     }",
-                    $"cmd:parking:toggle:{slot.Id}")
+                    $"cmd:parking:toggle:{slot.Id}"),
+                new TelegramInlineKeyboardButton(
+                    routeActive
+                        ? Localize(language, "💡 Світиться", "💡 Lit")
+                        : Localize(language, "➡️ Маршрут", "➡️ Route"),
+                    $"cmd:parking:route:{slot.Id}")
             ]);
         }
+
+        rows.Add(
+        [
+            new TelegramInlineKeyboardButton(
+                Localize(language, "🧠 Smart маршрут", "🧠 Smart route"),
+                "cmd:parking:route-smart"),
+            new TelegramInlineKeyboardButton(
+                Localize(language, "🕯️ Вимкнути маршрут", "🕯️ Clear route"),
+                "cmd:parking:route-clear")
+        ]);
 
         rows.Add(
         [
@@ -444,6 +461,32 @@ public sealed class TelegramMenuService
 
     private static string? LocalizeParkingCommandMessage(string message)
     {
+        if (message == "Parking route cleared.")
+        {
+            return "Маршрут паркування вимкнено.";
+        }
+
+        if (message == "No free physical parking route slot is available.")
+        {
+            return "Немає вільного фізичного місця P1-P3 для маршруту.";
+        }
+
+        const string routePrefix = "Parking route to ";
+        if (message.StartsWith(routePrefix, StringComparison.Ordinal)
+            && message.EndsWith(" enabled.", StringComparison.Ordinal))
+        {
+            var slotId = message[routePrefix.Length..^" enabled.".Length];
+            return $"Маршрут до {slotId} увімкнено.";
+        }
+
+        const string smartRoutePrefix = "Smart parking route to ";
+        if (message.StartsWith(smartRoutePrefix, StringComparison.Ordinal)
+            && message.EndsWith(" enabled.", StringComparison.Ordinal))
+        {
+            var slotId = message[smartRoutePrefix.Length..^" enabled.".Length];
+            return $"Smart-маршрут до {slotId} увімкнено.";
+        }
+
         const string prefix = "Parking slot ";
 
         if (!message.StartsWith(prefix, StringComparison.Ordinal))
@@ -475,6 +518,14 @@ public sealed class TelegramMenuService
     private static string Localize(TelegramChatLanguage language, string ukrainian, string english)
     {
         return language == TelegramChatLanguage.Ukrainian ? ukrainian : english;
+    }
+
+    private static bool TryParseSlotNumber(string slotId, out int slotNumber)
+    {
+        slotNumber = 0;
+        return slotId.Length >= 2
+               && slotId[0] == 'P'
+               && int.TryParse(slotId[1..], out slotNumber);
     }
 
     private static TelegramChatLanguage GetLanguageOrDefault(TelegramChatSettings settings)
@@ -553,7 +604,10 @@ public sealed class TelegramMenuService
             EventKind.GateClosedAngleChanged => Localize(language, "Кут закриття", "Closed angle"),
             EventKind.GateOpenDurationChanged => Localize(language, "Тривалість відкриття", "Open duration"),
             EventKind.GateAutoExitOpenChanged => Localize(language, "Автовідкриття на виїзд", "Auto-open on exit"),
-            EventKind.GateAutoCloseAfterPassChanged => Localize(language, "Автозакриття після проїзду", "Auto-close after passage"),
+            EventKind.GateAutoCloseAfterPassChanged => Localize(
+                language,
+                "Автозакриття після проїзду",
+                "Auto-close after passage"),
             EventKind.GatePassageThresholdChanged => Localize(language, "Поріг проїзду", "Passage threshold"),
             EventKind.MonitorForceModeChanged => Localize(language, "Примусовий режим", "Forced mode"),
             EventKind.MonitorTextChanged => Localize(language, "Текст", "Text"),
@@ -643,8 +697,14 @@ public sealed class TelegramMenuService
             EventKind.GateClosedAngleChanged => Localize(language, "Кут закриття воріт", "Gate closed angle"),
             EventKind.GateOpenDurationChanged => Localize(language, "Тривалість відкриття воріт", "Gate open duration"),
             EventKind.GateAutoExitOpenChanged => Localize(language, "Автовідкриття на виїзд", "Auto-open on exit"),
-            EventKind.GateAutoCloseAfterPassChanged => Localize(language, "Автозакриття після проїзду", "Auto-close after passage"),
-            EventKind.GatePassageThresholdChanged => Localize(language, "Поріг датчика проїзду", "Gate passage threshold"),
+            EventKind.GateAutoCloseAfterPassChanged => Localize(
+                language,
+                "Автозакриття після проїзду",
+                "Auto-close after passage"),
+            EventKind.GatePassageThresholdChanged => Localize(
+                language,
+                "Поріг датчика проїзду",
+                "Gate passage threshold"),
             EventKind.MonitorForceModeChanged => Localize(language, "Режим монітора", "Monitor mode"),
             EventKind.MonitorTextChanged => Localize(language, "Текст монітора", "Monitor text"),
             EventKind.MonitorTemplateChanged => Localize(language, "Шаблон монітора", "Monitor template"),

@@ -1,4 +1,5 @@
 #include <SoftwareSerial.h>
+#include <Adafruit_NeoPixel.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -103,6 +104,9 @@ constexpr unsigned long DEMO_GATE_PASSAGE_OCCUPIED_AFTER_OPEN_MS = 900UL;
 constexpr unsigned long DEMO_GATE_PASSAGE_FREE_AFTER_OPEN_MS = 1800UL;
 constexpr unsigned long GATE_PASSAGE_AUTO_EXIT_COOLDOWN_MS = 3000UL;
 constexpr uint8_t GATE_PASSAGE_STABILITY_READS = 2;
+constexpr uint8_t ROUTE_LED_STRIP_COUNT = 3;
+constexpr uint8_t ROUTE_LED_COUNT_PER_STRIP = 8;
+constexpr uint8_t ROUTE_LED_BRIGHTNESS = 80;
 
 // -----------------------------------------------------------------------------
 // Піни паркомісць
@@ -114,6 +118,13 @@ const uint8_t trigPins[SLOT_COUNT] = {7, 4, A0, NO_PIN, NO_PIN, NO_PIN};
 const uint8_t echoPins[SLOT_COUNT] = {8, 6, A1, NO_PIN, NO_PIN, NO_PIN};
 constexpr uint8_t GATE_PASSAGE_TRIG_PIN = A2;
 constexpr uint8_t GATE_PASSAGE_ECHO_PIN = A3;
+
+// Addressable LED route strips. Use Arduino Mega pins: one strip guides to one physical slot.
+const uint8_t routeLedPins[ROUTE_LED_STRIP_COUNT] = {22, 23, 24};
+Adafruit_NeoPixel routeLedStrips[ROUTE_LED_STRIP_COUNT] = {
+    Adafruit_NeoPixel(ROUTE_LED_COUNT_PER_STRIP, routeLedPins[0], NEO_GRB + NEO_KHZ800),
+    Adafruit_NeoPixel(ROUTE_LED_COUNT_PER_STRIP, routeLedPins[1], NEO_GRB + NEO_KHZ800),
+    Adafruit_NeoPixel(ROUTE_LED_COUNT_PER_STRIP, routeLedPins[2], NEO_GRB + NEO_KHZ800)};
 
 // -----------------------------------------------------------------------------
 // Стан воріт
@@ -210,6 +221,10 @@ unsigned long lastAutoExitOpenAt = 0;
 unsigned long slotOccupiedSince[SLOT_COUNT] = {0};
 bool slotOccupied[SLOT_COUNT] = {false};
 int16_t slotDistanceCm[SLOT_COUNT] = {0};
+uint8_t activeRouteSlot = 0;
+char lastAccessUid[UID_LENGTH * 2 + 1] = "";
+char lastAccessResult[9] = "";
+uint16_t lastAccessCounter = 0;
 bool demoSlotOccupied[SLOT_COUNT] = {false};
 unsigned long demoSlotNextToggleAt[3] = {0};
 unsigned long demoNextCardAt = 0;
@@ -239,6 +254,9 @@ void updateGateMode();
 void updateGatePassageState();
 void updateGatePassageAutomation();
 void updateParkingStates();
+void setupRouteLedStrips();
+void clearRouteLedStrips();
+void showRouteToSlot(uint8_t slotIndex);
 void updateLcd();
 void showMessage(const char *line1, const char *line2);
 void updateDisplayState();
@@ -279,6 +297,7 @@ void writeSlotLine(uint8_t slotIndex);
 long readDistanceCm(uint8_t trigPin, uint8_t echoPin);
 void startTemporaryGateOpen(bool armAutoClose);
 void resetGatePassageAutomation();
+void setLastAccessEvent(const byte uid[UID_LENGTH], const char *result);
 void trimLine(char *line);
 void updateDemoMode();
 void updateDemoGatePassageCycle();
@@ -325,6 +344,8 @@ void setup()
         pinMode(GATE_PASSAGE_TRIG_PIN, OUTPUT);
         pinMode(GATE_PASSAGE_ECHO_PIN, INPUT);
     }
+
+    setupRouteLedStrips();
 
     loadConfig();
     updateGatePassageState();
@@ -639,6 +660,19 @@ void resetGatePassageAutomation()
     }
 }
 
+void setLastAccessEvent(const byte uid[UID_LENGTH], const char *result)
+{
+    for (uint8_t i = 0; i < UID_LENGTH; i++)
+    {
+        sprintf(&lastAccessUid[i * 2], "%02X", uid[i]);
+    }
+
+    lastAccessUid[UID_LENGTH * 2] = '\0';
+    strncpy(lastAccessResult, result, sizeof(lastAccessResult) - 1);
+    lastAccessResult[sizeof(lastAccessResult) - 1] = '\0';
+    lastAccessCounter++;
+}
+
 // -----------------------------------------------------------------------------
 // updateParkingStates
 // -----------------------------------------------------------------------------
@@ -713,6 +747,55 @@ void updateParkingStates()
         }
 
         slotOccupied[i] = isOccupiedNow;
+    }
+}
+
+void setupRouteLedStrips()
+{
+    for (uint8_t i = 0; i < ROUTE_LED_STRIP_COUNT; i++)
+    {
+        routeLedStrips[i].begin();
+        routeLedStrips[i].setBrightness(ROUTE_LED_BRIGHTNESS);
+        routeLedStrips[i].clear();
+        routeLedStrips[i].show();
+    }
+}
+
+void clearRouteLedStrips()
+{
+    activeRouteSlot = 0;
+
+    for (uint8_t i = 0; i < ROUTE_LED_STRIP_COUNT; i++)
+    {
+        routeLedStrips[i].clear();
+        routeLedStrips[i].show();
+    }
+}
+
+void showRouteToSlot(uint8_t slotIndex)
+{
+    if (slotIndex >= ROUTE_LED_STRIP_COUNT)
+    {
+        clearRouteLedStrips();
+        return;
+    }
+
+    activeRouteSlot = slotIndex + 1;
+    uint32_t routeColor = routeLedStrips[slotIndex].Color(0, 180, 80);
+
+    for (uint8_t stripIndex = 0; stripIndex < ROUTE_LED_STRIP_COUNT; stripIndex++)
+    {
+        routeLedStrips[stripIndex].clear();
+
+        if (stripIndex == slotIndex)
+        {
+            for (uint8_t ledIndex = 0; ledIndex < ROUTE_LED_COUNT_PER_STRIP; ledIndex++)
+            {
+                routeLedStrips[stripIndex].setPixelColor(ledIndex, routeColor);
+            }
+        }
+
+        routeLedStrips[stripIndex].show();
     }
 }
 
@@ -853,11 +936,11 @@ void sendProfile()
     beginProtocolFrame();
     if (DEMO_MODE)
     {
-        btSerial.print(F("PROFILE|board=ATmega328P|rfid=DEMO|lcd=I2C_16X2|gate=DEMO|transport=HC06|slots=6"));
+        btSerial.print(F("PROFILE|board=ArduinoMega|rfid=DEMO|lcd=I2C_16X2|gate=DEMO|transport=HC06|slots=6|route_led_strips=3"));
     }
     else
     {
-        btSerial.print(F("PROFILE|board=ATmega328P|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05|slots=6"));
+        btSerial.print(F("PROFILE|board=ArduinoMega|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05|slots=6|route_led_strips=3"));
     }
     endProtocolFrame();
 }
@@ -888,6 +971,8 @@ void sendConfig()
     btSerial.print(config.autoCloseAfterPassEnabled);
     btSerial.print(F("|passage_threshold_cm="));
     btSerial.print(config.gatePassageThresholdCm);
+    btSerial.print(F("|route_slot="));
+    btSerial.print(activeRouteSlot);
     endProtocolFrame();
 
     for (uint8_t i = 0; i < SLOT_COUNT; i++)
@@ -951,6 +1036,12 @@ void sendTelemetry()
     btSerial.print(gatePassageOccupied ? 1 : 0);
     btSerial.print(F("|passage_distance_cm="));
     btSerial.print(gatePassageDistanceCm);
+    btSerial.print(F("|last_access_uid="));
+    btSerial.print(lastAccessUid);
+    btSerial.print(F("|last_access_result="));
+    btSerial.print(lastAccessResult);
+    btSerial.print(F("|last_access_counter="));
+    btSerial.print(lastAccessCounter);
     endProtocolFrame();
 
     beginProtocolFrame();
@@ -1108,7 +1199,7 @@ void handleBluetoothInput()
         {
             // Якщо команда надто довга - очищаємо буфер і повідомляємо про помилку.
             rxIndex = 0;
-            sendError("RX", "BUFFER_OVERFLOW");
+            sendError(F("RX"), F("BUFFER_OVERFLOW"));
         }
     }
 }
@@ -1181,7 +1272,7 @@ void handleHelloCommand(char *context)
         return;
     }
 
-    sendError("HELLO", "INVALID_TOKEN");
+    sendError(F("HELLO"), F("INVALID_TOKEN"));
 }
 
 // -----------------------------------------------------------------------------
@@ -1193,7 +1284,7 @@ void handleGetCommand(char *context)
     char *token = strtok_r(nullptr, " ", &context);
     if (token == nullptr)
     {
-        sendError("GET", "MISSING_TARGET");
+        sendError(F("GET"), F("MISSING_TARGET"));
         return;
     }
 
@@ -1211,7 +1302,7 @@ void handleGetCommand(char *context)
     }
     else
     {
-        sendError("GET", "UNKNOWN_TARGET");
+        sendError(F("GET"), F("UNKNOWN_TARGET"));
     }
 }
 
@@ -1224,7 +1315,7 @@ void handleGateCommand(char *context)
     char *action = strtok_r(nullptr, " ", &context);
     if (action == nullptr)
     {
-        sendError("GATE", "MISSING_ACTION");
+        sendError(F("GATE"), F("MISSING_ACTION"));
         return;
     }
 
@@ -1233,7 +1324,7 @@ void handleGateCommand(char *context)
         char *value = strtok_r(nullptr, " ", &context);
         if (value == nullptr)
         {
-            sendError("GATE", "MISSING_FORCE_OPEN_VALUE");
+            sendError(F("GATE"), F("MISSING_FORCE_OPEN_VALUE"));
             return;
         }
 
@@ -1247,20 +1338,20 @@ void handleGateCommand(char *context)
 
         resetGatePassageAutomation();
         updateGateMode();
-        sendOk("GATE", "FORCE_OPEN_UPDATED");
+        sendOk(F("GATE"), F("FORCE_OPEN_UPDATED"));
     }
     else if (strcmp(action, "OPEN_TEMP") == 0)
     {
         // Тимчасово відкрити не можна, якщо ворота заблоковані.
         if (config.forceGateLock)
         {
-            sendError("GATE", "LOCKED");
+            sendError(F("GATE"), F("LOCKED"));
             return;
         }
 
         startTemporaryGateOpen(true);
         updateGateMode();
-        sendOk("GATE", "TEMP_OPEN_STARTED");
+        sendOk(F("GATE"), F("TEMP_OPEN_STARTED"));
     }
     else if (strcmp(action, "CLOSE") == 0)
     {
@@ -1270,14 +1361,14 @@ void handleGateCommand(char *context)
         temporaryGateExpiresAt = 0;
         resetGatePassageAutomation();
         updateGateMode();
-        sendOk("GATE", "CLOSED");
+        sendOk(F("GATE"), F("CLOSED"));
     }
     else if (strcmp(action, "LOCK") == 0)
     {
         char *value = strtok_r(nullptr, " ", &context);
         if (value == nullptr)
         {
-            sendError("GATE", "MISSING_LOCK_VALUE");
+            sendError(F("GATE"), F("MISSING_LOCK_VALUE"));
             return;
         }
 
@@ -1293,16 +1384,16 @@ void handleGateCommand(char *context)
         }
         else
         {
-            sendError("GATE", "INVALID_LOCK_VALUE");
+            sendError(F("GATE"), F("INVALID_LOCK_VALUE"));
             return;
         }
 
         updateGateMode();
-        sendOk("GATE", "LOCK_UPDATED");
+        sendOk(F("GATE"), F("LOCK_UPDATED"));
     }
     else
     {
-        sendError("GATE", "UNKNOWN_ACTION");
+        sendError(F("GATE"), F("UNKNOWN_ACTION"));
     }
 }
 
@@ -1318,14 +1409,14 @@ void handleConfigCommand(char *context)
     char *action = strtok_r(nullptr, " ", &context);
     if (action == nullptr)
     {
-        sendError("CONFIG", "MISSING_ACTION");
+        sendError(F("CONFIG"), F("MISSING_ACTION"));
         return;
     }
 
     if (strcmp(action, "SAVE") == 0)
     {
         saveConfig();
-        sendOk("CONFIG", "SAVED");
+        sendOk(F("CONFIG"), F("SAVED"));
         return;
     }
 
@@ -1336,14 +1427,14 @@ void handleConfigCommand(char *context)
         updateGateMode();
         updateParkingStates();
         updateDisplayState();
-        sendOk("CONFIG", "RESET_TO_DEFAULTS");
+        sendOk(F("CONFIG"), F("RESET_TO_DEFAULTS"));
         return;
     }
 
     char *value = strtok_r(nullptr, " ", &context);
     if (value == nullptr)
     {
-        sendError("CONFIG", "MISSING_VALUE");
+        sendError(F("CONFIG"), F("MISSING_VALUE"));
         return;
     }
 
@@ -1353,31 +1444,31 @@ void handleConfigCommand(char *context)
     {
         config.servoOpenAngle = constrain(parsedValue, 0, 180);
         updateGateMode();
-        sendOk("CONFIG", "OPEN_ANGLE_UPDATED");
+        sendOk(F("CONFIG"), F("OPEN_ANGLE_UPDATED"));
     }
     else if (strcmp(action, "CLOSED_ANGLE") == 0)
     {
         config.servoClosedAngle = constrain(parsedValue, 0, 180);
         updateGateMode();
-        sendOk("CONFIG", "CLOSED_ANGLE_UPDATED");
+        sendOk(F("CONFIG"), F("CLOSED_ANGLE_UPDATED"));
     }
     else if (strcmp(action, "OPEN_DURATION_MS") == 0)
     {
         config.servoOpenDurationMs = max(250L, parsedValue);
         updateGateMode();
-        sendOk("CONFIG", "OPEN_DURATION_UPDATED");
+        sendOk(F("CONFIG"), F("OPEN_DURATION_UPDATED"));
     }
     else if (strcmp(action, "THRESHOLD_CM") == 0)
     {
         config.occupiedThresholdCm = max(1L, parsedValue);
         updateGateMode();
-        sendOk("CONFIG", "THRESHOLD_UPDATED");
+        sendOk(F("CONFIG"), F("THRESHOLD_UPDATED"));
     }
     else if (strcmp(action, "TELEMETRY_MS") == 0)
     {
         config.telemetryIntervalMs = max(250L, parsedValue);
         updateGateMode();
-        sendOk("CONFIG", "TELEMETRY_UPDATED");
+        sendOk(F("CONFIG"), F("TELEMETRY_UPDATED"));
     }
     else if (strcmp(action, "AUTO_EXIT_OPEN") == 0)
     {
@@ -1391,11 +1482,11 @@ void handleConfigCommand(char *context)
         }
         else
         {
-            sendError("CONFIG", "INVALID_AUTO_EXIT_OPEN_VALUE");
+            sendError(F("CONFIG"), F("INVALID_AUTO_EXIT_OPEN_VALUE"));
             return;
         }
 
-        sendOk("CONFIG", "AUTO_EXIT_OPEN_UPDATED");
+        sendOk(F("CONFIG"), F("AUTO_EXIT_OPEN_UPDATED"));
     }
     else if (strcmp(action, "AUTO_CLOSE_AFTER_PASS") == 0)
     {
@@ -1410,21 +1501,21 @@ void handleConfigCommand(char *context)
         }
         else
         {
-            sendError("CONFIG", "INVALID_AUTO_CLOSE_AFTER_PASS_VALUE");
+            sendError(F("CONFIG"), F("INVALID_AUTO_CLOSE_AFTER_PASS_VALUE"));
             return;
         }
 
-        sendOk("CONFIG", "AUTO_CLOSE_AFTER_PASS_UPDATED");
+        sendOk(F("CONFIG"), F("AUTO_CLOSE_AFTER_PASS_UPDATED"));
     }
     else if (strcmp(action, "PASSAGE_THRESHOLD_CM") == 0)
     {
         config.gatePassageThresholdCm = max(1L, parsedValue);
         updateGatePassageState();
-        sendOk("CONFIG", "PASSAGE_THRESHOLD_UPDATED");
+        sendOk(F("CONFIG"), F("PASSAGE_THRESHOLD_UPDATED"));
     }
     else
     {
-        sendError("CONFIG", "UNKNOWN_FIELD");
+        sendError(F("CONFIG"), F("UNKNOWN_FIELD"));
         return;
     }
 }
@@ -1437,16 +1528,29 @@ void handleParkingCommand(char *context)
 {
     char *action = strtok_r(nullptr, " ", &context);
     char *slotToken = strtok_r(nullptr, " ", &context);
-    if (action == nullptr || slotToken == nullptr)
+    if (action == nullptr)
     {
-        sendError("PARKING", "INVALID_COMMAND");
+        sendError(F("PARKING"), F("INVALID_COMMAND"));
+        return;
+    }
+
+    if (strcmp(action, "ROUTE_CLEAR") == 0)
+    {
+        clearRouteLedStrips();
+        sendOk(F("PARKING"), F("ROUTE_CLEARED"));
+        return;
+    }
+
+    if (slotToken == nullptr)
+    {
+        sendError(F("PARKING"), F("INVALID_COMMAND"));
         return;
     }
 
     int slotNumber = atoi(slotToken);
     if (slotNumber < 1 || slotNumber > SLOT_COUNT)
     {
-        sendError("PARKING", "INVALID_SLOT");
+        sendError(F("PARKING"), F("INVALID_SLOT"));
         return;
     }
 
@@ -1454,16 +1558,27 @@ void handleParkingCommand(char *context)
     if (strcmp(action, "ENABLE") == 0)
     {
         setSlotEnabled(index, true);
-        sendOk("PARKING", "SLOT_ENABLED");
+        sendOk(F("PARKING"), F("SLOT_ENABLED"));
     }
     else if (strcmp(action, "DISABLE") == 0)
     {
         setSlotEnabled(index, false);
-        sendOk("PARKING", "SLOT_DISABLED");
+        sendOk(F("PARKING"), F("SLOT_DISABLED"));
+    }
+    else if (strcmp(action, "ROUTE") == 0)
+    {
+        if (index >= ROUTE_LED_STRIP_COUNT)
+        {
+            sendError(F("PARKING"), F("ROUTE_SLOT_HAS_NO_STRIP"));
+            return;
+        }
+
+        showRouteToSlot(index);
+        sendOk(F("PARKING"), F("ROUTE_ENABLED"));
     }
     else
     {
-        sendError("PARKING", "UNKNOWN_ACTION");
+        sendError(F("PARKING"), F("UNKNOWN_ACTION"));
         return;
     }
 
@@ -1480,7 +1595,7 @@ void handleCardsCommand(char *context)
     char *action = strtok_r(nullptr, " ", &context);
     if (listType == nullptr || action == nullptr)
     {
-        sendError("CARDS", "INVALID_COMMAND");
+        sendError(F("CARDS"), F("INVALID_COMMAND"));
         return;
     }
 
@@ -1499,7 +1614,7 @@ void handleCardsCommand(char *context)
     }
     else
     {
-        sendError("CARDS", "UNKNOWN_LIST");
+        sendError(F("CARDS"), F("UNKNOWN_LIST"));
         return;
     }
 
@@ -1513,14 +1628,14 @@ void handleCardsCommand(char *context)
     char *uidToken = strtok_r(nullptr, " ", &context);
     if (uidToken == nullptr)
     {
-        sendError("CARDS", "MISSING_UID");
+        sendError(F("CARDS"), F("MISSING_UID"));
         return;
     }
 
     byte uid[UID_LENGTH];
     if (!parseUidHex(uidToken, uid))
     {
-        sendError("CARDS", "INVALID_UID");
+        sendError(F("CARDS"), F("INVALID_UID"));
         return;
     }
 
@@ -1548,7 +1663,7 @@ void handleCardsCommand(char *context)
     }
     else
     {
-        sendError("CARDS", "UNKNOWN_ACTION");
+        sendError(F("CARDS"), F("UNKNOWN_ACTION"));
     }
 }
 
@@ -1557,7 +1672,7 @@ void handleDisplayCommand(char *context)
     char *action = strtok_r(nullptr, " ", &context);
     if (action == nullptr)
     {
-        sendError("DISPLAY", "MISSING_ACTION");
+        sendError(F("DISPLAY"), F("MISSING_ACTION"));
         return;
     }
 
@@ -1566,7 +1681,7 @@ void handleDisplayCommand(char *context)
         char *value = strtok_r(nullptr, " ", &context);
         if (value == nullptr)
         {
-            sendError("DISPLAY", "MISSING_FORCE_VALUE");
+            sendError(F("DISPLAY"), F("MISSING_FORCE_VALUE"));
             return;
         }
 
@@ -1580,12 +1695,12 @@ void handleDisplayCommand(char *context)
         }
         else
         {
-            sendError("DISPLAY", "INVALID_FORCE_VALUE");
+            sendError(F("DISPLAY"), F("INVALID_FORCE_VALUE"));
             return;
         }
 
         updateDisplayState();
-        sendOk("DISPLAY", "FORCE_UPDATED");
+        sendOk(F("DISPLAY"), F("FORCE_UPDATED"));
         return;
     }
 
@@ -1594,7 +1709,7 @@ void handleDisplayCommand(char *context)
         char *key = strtok_r(nullptr, " ", &context);
         if (key == nullptr)
         {
-            sendError("DISPLAY", "MISSING_TEXT_KEY");
+            sendError(F("DISPLAY"), F("MISSING_TEXT_KEY"));
             return;
         }
 
@@ -1631,39 +1746,39 @@ void handleDisplayCommand(char *context)
         }
         else
         {
-            sendError("DISPLAY", "UNKNOWN_TEXT_KEY");
+            sendError(F("DISPLAY"), F("UNKNOWN_TEXT_KEY"));
             return;
         }
 
         updateDisplayState();
         if (strcmp(key, "FORCED") == 0)
         {
-            sendOk("DISPLAY", "TEXT_FORCED_UPDATED");
+            sendOk(F("DISPLAY"), F("TEXT_FORCED_UPDATED"));
         }
         else if (strcmp(key, "DEFAULT") == 0)
         {
-            sendOk("DISPLAY", "TEXT_DEFAULT_UPDATED");
+            sendOk(F("DISPLAY"), F("TEXT_DEFAULT_UPDATED"));
         }
         else if (strcmp(key, "ALLOWED") == 0)
         {
-            sendOk("DISPLAY", "TEXT_ALLOWED_UPDATED");
+            sendOk(F("DISPLAY"), F("TEXT_ALLOWED_UPDATED"));
         }
         else if (strcmp(key, "BLOCKED") == 0)
         {
-            sendOk("DISPLAY", "TEXT_BLOCKED_UPDATED");
+            sendOk(F("DISPLAY"), F("TEXT_BLOCKED_UPDATED"));
         }
         else if (strcmp(key, "INVALID") == 0)
         {
-            sendOk("DISPLAY", "TEXT_INVALID_UPDATED");
+            sendOk(F("DISPLAY"), F("TEXT_INVALID_UPDATED"));
         }
         else
         {
-            sendOk("DISPLAY", "TEXT_LOCKED_UPDATED");
+            sendOk(F("DISPLAY"), F("TEXT_LOCKED_UPDATED"));
         }
         return;
     }
 
-    sendError("DISPLAY", "UNKNOWN_ACTION");
+    sendError(F("DISPLAY"), F("UNKNOWN_ACTION"));
 }
 
 // -----------------------------------------------------------------------------
@@ -1765,9 +1880,12 @@ void startDemoGatePassageCycle()
 // Штучно відкриває ворота так, ніби була проведена дозволена картка.
 void triggerDemoCardEvent()
 {
+    byte demoUid[UID_LENGTH] = {0xB0, 0x41, 0xCE, 0x32};
+
     if (config.forceGateLock)
     {
         setTransientDisplayText(config.displayLockedText);
+        setLastAccessEvent(demoUid, "LOCKED");
         beginProtocolFrame();
         btSerial.print(F("LOCKED|uid=B041CE32"));
         endProtocolFrame();
@@ -1781,6 +1899,7 @@ void triggerDemoCardEvent()
 
     updateGateMode();
     setTransientDisplayText(config.displayAllowedText);
+    setLastAccessEvent(demoUid, "ALLOWED");
     beginProtocolFrame();
     btSerial.print(F("ALLOWED|uid=B041CE32"));
     endProtocolFrame();
@@ -1824,12 +1943,14 @@ void handleRfid()
             showMessage("Access Granted", "Gate Open");
             setTransientDisplayText(config.displayAllowedText);
             btSerial.print(F("ALLOWED|uid="));
+            setLastAccessEvent(uid, "ALLOWED");
         }
         else
         {
             showMessage("Access Locked", "Gate Blocked");
             setTransientDisplayText(config.displayLockedText);
             btSerial.print(F("LOCKED|uid="));
+            setLastAccessEvent(uid, "LOCKED");
         }
     }
     else if (compareUid(uid, config.blockedCards, config.blockedCount))
@@ -1837,12 +1958,14 @@ void handleRfid()
         showMessage("Blocked Card", "Access Denied");
         setTransientDisplayText(config.displayBlockedText);
         btSerial.print(F("BLOCKED|uid="));
+        setLastAccessEvent(uid, "BLOCKED");
     }
     else
     {
         showMessage("Invalid Card", "Access Denied");
         setTransientDisplayText(config.displayInvalidText);
         btSerial.print(F("INVALID|uid="));
+        setLastAccessEvent(uid, "INVALID");
     }
 
     printUidHex(btSerial, uid);

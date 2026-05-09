@@ -9,4 +9,7 @@ public interface IParkingService
     Task<IReadOnlyList<ParkingSlotSnapshot>> ToggleSlotEnabledAsync(
         string slotId,
         CancellationToken cancellationToken = default);
+
+    Task ShowRouteToSlotAsync(string slotId, CancellationToken cancellationToken = default);
+    Task ClearRouteAsync(CancellationToken cancellationToken = default);
 }

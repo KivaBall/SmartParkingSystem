@@ -11,6 +11,10 @@ public sealed class ParkingService(
     IDeviceCommandService commandService,
     ISettingsPreferencesService settingsPreferencesService) : IParkingService
 {
+    private const int RouteAutoClearSeconds = 30;
+    private readonly Lock _routeAutoClearSync = new Lock();
+    private int _routeAutoClearVersion;
+
     public Task<IReadOnlyList<ParkingSlotSnapshot>> GetSlotsAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult<IReadOnlyList<ParkingSlotSnapshot>>(BuildSlots(sessionService.CurrentSession));
@@ -40,6 +44,76 @@ public sealed class ParkingService(
         await sessionService.RefreshSessionAsync(cancellationToken);
 
         return BuildSlots(sessionService.CurrentSession);
+    }
+
+    public async Task ShowRouteToSlotAsync(string slotId, CancellationToken cancellationToken = default)
+    {
+        var slotNumber = ParseSlotNumber(slotId);
+        if (slotNumber is null)
+        {
+            throw new ArgumentException("Slot id must use the P<number> format.", nameof(slotId));
+        }
+
+        await EnsureSucceededAsync(
+            commandService.ShowRouteToSlotAsync(slotNumber.Value, cancellationToken),
+            $"PARKING ROUTE {slotNumber.Value}");
+        await sessionService.RefreshConfigurationAsync(cancellationToken);
+        ScheduleRouteAutoClear();
+    }
+
+    public async Task ClearRouteAsync(CancellationToken cancellationToken = default)
+    {
+        CancelPendingRouteAutoClear();
+        await EnsureSucceededAsync(
+            commandService.ClearRouteAsync(cancellationToken),
+            "PARKING ROUTE_CLEAR");
+        await sessionService.RefreshConfigurationAsync(cancellationToken);
+    }
+
+    private void ScheduleRouteAutoClear()
+    {
+        int version;
+        lock (_routeAutoClearSync)
+        {
+            version = ++_routeAutoClearVersion;
+        }
+
+        _ = ClearRouteAfterDelayAsync(version);
+    }
+
+    private void CancelPendingRouteAutoClear()
+    {
+        lock (_routeAutoClearSync)
+        {
+            _routeAutoClearVersion++;
+        }
+    }
+
+    private async Task ClearRouteAfterDelayAsync(int version)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(RouteAutoClearSeconds));
+
+        lock (_routeAutoClearSync)
+        {
+            if (version != _routeAutoClearVersion)
+            {
+                return;
+            }
+
+            _routeAutoClearVersion++;
+        }
+
+        try
+        {
+            await EnsureSucceededAsync(
+                commandService.ClearRouteAsync(),
+                "PARKING ROUTE_CLEAR");
+            await sessionService.RefreshConfigurationAsync();
+        }
+        catch
+        {
+            // Route auto-clear is best-effort; the next manual command or session refresh will recover state.
+        }
     }
 
     private ParkingSlotSnapshot[] BuildSlots(DeviceControllerSession? session)

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using SmartParkingSystem.Domain.Models.Events;
 using SmartParkingSystem.Domain.Models.Localization;
+using SmartParkingSystem.Domain.Models.Parking;
 
 namespace SmartParkingSystem.Maui.Services.AppMemory;
 
@@ -9,6 +10,7 @@ public sealed class AppMemoryStore : IAppMemoryStore
 {
     private const string EventsFileName = "events.json";
     private const string LanguageFileName = "language.json";
+    private const string SmartParkingProfilesFileName = "smart-parking-profiles.json";
 
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
@@ -55,6 +57,22 @@ public sealed class AppMemoryStore : IAppMemoryStore
         lock (_sync)
         {
             WriteFile(EventsFileName, events);
+        }
+    }
+
+    public IReadOnlyList<SmartParkingCardProfile> GetSmartParkingCardProfiles()
+    {
+        lock (_sync)
+        {
+            return ReadFile<SmartParkingCardProfile[]>(SmartParkingProfilesFileName) ?? [];
+        }
+    }
+
+    public void SetSmartParkingCardProfiles(IReadOnlyList<SmartParkingCardProfile> profiles)
+    {
+        lock (_sync)
+        {
+            WriteFile(SmartParkingProfilesFileName, profiles);
         }
     }
 

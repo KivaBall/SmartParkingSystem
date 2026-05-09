@@ -20,4 +20,5 @@ public sealed record DeviceControllerConfiguration(
     string DisplayInvalidText,
     string DisplayLockedText,
     IReadOnlyList<string> AllowedCards,
-    IReadOnlyList<string> BlockedCards);
+    IReadOnlyList<string> BlockedCards,
+    int ActiveRouteSlot = 0);

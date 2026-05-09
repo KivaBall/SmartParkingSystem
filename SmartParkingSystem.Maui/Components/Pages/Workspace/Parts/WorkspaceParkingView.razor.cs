@@ -78,6 +78,11 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
     protected bool CanMoveToNextFloor => ActiveFloor < MaxFloor;
     protected bool CanRaiseSelectedSlot => !IsBusy && SelectedSlot is { Floor: < MaxFloor };
     protected bool CanLowerSelectedSlot => !IsBusy && SelectedSlot is { Floor: > MinFloor };
+
+    protected bool CanShowRouteToSelectedSlot =>
+        !IsBusy && SelectedSlot is not null && TryParseSlotNumber(SelectedSlot.Id, out var slotNumber) &&
+        slotNumber <= 3;
+
     protected string FloorLayerStyle => IsFloorContentVisible ? "opacity: 1;" : "opacity: 0;";
 
     protected string ParkingMapImagePath => ActiveFloor == MinFloor
@@ -207,6 +212,48 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
             LastParkingStateFingerprint = BuildParkingStateFingerprint(RequireDeviceSessionService().CurrentSession);
             SyncDrafts();
             NeedsIconRefresh = true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected async Task ShowRouteToSelectedSlotAsync()
+    {
+        if (!CanShowRouteToSelectedSlot || SelectedSlot is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await RequireParkingService().ShowRouteToSlotAsync(SelectedSlot.Id);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected async Task ClearRouteAsync()
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await RequireParkingService().ClearRouteAsync();
         }
         finally
         {

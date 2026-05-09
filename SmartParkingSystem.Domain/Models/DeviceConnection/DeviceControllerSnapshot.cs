@@ -16,4 +16,7 @@ public sealed record DeviceControllerSnapshot(
     bool DisplayForced,
     IReadOnlyList<DeviceSlotSnapshot> Slots,
     int AllowedCount,
-    int BlockedCount);
+    int BlockedCount,
+    string LastAccessUid = "",
+    string LastAccessResult = "",
+    int LastAccessCounter = 0);

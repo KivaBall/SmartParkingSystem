@@ -7,5 +7,8 @@ public enum BackendCommandKind
     OpenGateTemporarily,
     CloseGate,
     ToggleGateLock,
-    ToggleParkingSlot
+    ToggleParkingSlot,
+    ShowParkingRoute,
+    ClearParkingRoute,
+    ShowSmartParkingRoute
 }
