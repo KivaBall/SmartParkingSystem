@@ -1,5 +1,4 @@
 using System.Globalization;
-
 namespace SmartParkingSystem.Maui.Services.Settings.Preferences;
 
 public sealed class SettingsPreferencesService : ISettingsPreferencesService
@@ -13,11 +12,28 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
     private const string AndroidBackendBaseUrl = "http://10.0.2.2:5112";
     private const string BackendBaseUrlKey = "backend.base-url";
     private const string BackendSyncEnabledKey = "backend.sync-enabled";
+    private const string CameraAiAccessScanEnabledKey = "camera.ai-access.scan-enabled";
+    private const string CameraAiAllowUnknownVehiclesKey = "camera.ai-access.allow-unknown-vehicles";
+    private const string CameraAiApiKeyKey = "camera.ai-access.api-key";
+    private const string CameraAiCaptureMissingRfidDescriptionsEnabledKey =
+        "camera.ai-access.capture-missing-rfid-descriptions-enabled";
+    private const string CameraAiLastStatusKey = "camera.ai-access.last-status";
     private const string CameraAutoSnapshotDelayMsKey = "camera.auto-snapshot-delay-ms";
     private const string CameraAutoSnapshotEnabledKey = "camera.auto-snapshot-enabled";
+    private const string CameraLcdAiUnavailableTextKey = "camera.lcd.ai-unavailable-text";
+    private const string CameraLcdAllowedTextKey = "camera.lcd.allowed-text";
+    private const string CameraLcdUnavailableTextKey = "camera.lcd.unavailable-text";
+    private const string CameraLcdUnknownDeniedTextKey = "camera.lcd.unknown-denied-text";
+    private const string CameraLcdUnrecognizedTextKey = "camera.lcd.unrecognized-text";
+    private const string DefaultCameraLcdAiUnavailableText = "AI UNAVAIL";
+    private const string DefaultCameraLcdAllowedText = "CAMERA ACCESS";
+    private const string DefaultCameraLcdUnavailableText = "CAMERA ERROR";
+    private const string DefaultCameraLcdUnknownDeniedText = "UNKNOWN DENY";
+    private const string DefaultCameraLcdUnrecognizedText = "UNRECOGNIZED";
     private const string DefaultBackendBaseUrl = "http://127.0.0.1:5112";
     private const string EditParkingEnabledKey = "workspace.edit-parking-enabled";
     private const string KeepCameraEnabledOutsideGateKey = "camera.keep-enabled-outside-gate";
+    private const string OpenAiUsageEnabledKey = "openai.usage-enabled";
     private const string WindowsBackendBaseUrl = "http://127.0.0.1:5112";
     public event Action? PreferencesChanged;
 
@@ -63,6 +79,74 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
     {
         get => Microsoft.Maui.Storage.Preferences.Default.Get(KeepCameraEnabledOutsideGateKey, false);
         set => SetPreference(KeepCameraEnabledOutsideGateKey, value, false);
+    }
+
+    public bool CameraAiAccessScanEnabled
+    {
+        get => Microsoft.Maui.Storage.Preferences.Default.Get(CameraAiAccessScanEnabledKey, false);
+        set => SetPreference(CameraAiAccessScanEnabledKey, value, false);
+    }
+
+    public bool CameraAiAllowUnknownVehicles
+    {
+        get => Microsoft.Maui.Storage.Preferences.Default.Get(CameraAiAllowUnknownVehiclesKey, false);
+        set => SetPreference(CameraAiAllowUnknownVehiclesKey, value, false);
+    }
+
+    public bool CameraAiCaptureMissingRfidDescriptionsEnabled
+    {
+        get => Microsoft.Maui.Storage.Preferences.Default.Get(
+            CameraAiCaptureMissingRfidDescriptionsEnabledKey,
+            false);
+        set => SetPreference(CameraAiCaptureMissingRfidDescriptionsEnabledKey, value, false);
+    }
+
+    public bool OpenAiUsageEnabled
+    {
+        get => Microsoft.Maui.Storage.Preferences.Default.Get(OpenAiUsageEnabledKey, false);
+        set => SetPreference(OpenAiUsageEnabledKey, value, false);
+    }
+
+    public string CameraAiApiKey
+    {
+        get => Microsoft.Maui.Storage.Preferences.Default.Get(CameraAiApiKeyKey, string.Empty).Trim();
+        set => SetPreference(CameraAiApiKeyKey, value.Trim(), string.Empty);
+    }
+
+    public string CameraAiLastStatus
+    {
+        get => Microsoft.Maui.Storage.Preferences.Default.Get(CameraAiLastStatusKey, string.Empty);
+        set => SetPreference(CameraAiLastStatusKey, value.Trim(), string.Empty);
+    }
+
+    public string CameraLcdUnavailableText
+    {
+        get => GetDisplayTextPreference(CameraLcdUnavailableTextKey, DefaultCameraLcdUnavailableText);
+        set => SetPreference(CameraLcdUnavailableTextKey, NormalizeDisplayText(value), DefaultCameraLcdUnavailableText);
+    }
+
+    public string CameraLcdUnrecognizedText
+    {
+        get => GetDisplayTextPreference(CameraLcdUnrecognizedTextKey, DefaultCameraLcdUnrecognizedText);
+        set => SetPreference(CameraLcdUnrecognizedTextKey, NormalizeDisplayText(value), DefaultCameraLcdUnrecognizedText);
+    }
+
+    public string CameraLcdAiUnavailableText
+    {
+        get => GetDisplayTextPreference(CameraLcdAiUnavailableTextKey, DefaultCameraLcdAiUnavailableText);
+        set => SetPreference(CameraLcdAiUnavailableTextKey, NormalizeDisplayText(value), DefaultCameraLcdAiUnavailableText);
+    }
+
+    public string CameraLcdUnknownDeniedText
+    {
+        get => GetDisplayTextPreference(CameraLcdUnknownDeniedTextKey, DefaultCameraLcdUnknownDeniedText);
+        set => SetPreference(CameraLcdUnknownDeniedTextKey, NormalizeDisplayText(value), DefaultCameraLcdUnknownDeniedText);
+    }
+
+    public string CameraLcdAllowedText
+    {
+        get => GetDisplayTextPreference(CameraLcdAllowedTextKey, DefaultCameraLcdAllowedText);
+        set => SetPreference(CameraLcdAllowedTextKey, NormalizeDisplayText(value), DefaultCameraLcdAllowedText);
     }
 
     public bool BackendSyncEnabled
@@ -186,6 +270,23 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
                && uri.Scheme is "http" or "https"
             ? normalizedValue
             : GetDefaultBackendBaseUrl();
+    }
+
+    private static string GetDisplayTextPreference(string key, string defaultValue)
+    {
+        return NormalizeDisplayText(Microsoft.Maui.Storage.Preferences.Default.Get(key, defaultValue), defaultValue);
+    }
+
+    private static string NormalizeDisplayText(string? value, string defaultValue = "")
+    {
+        var normalized = string.IsNullOrWhiteSpace(value) ? defaultValue : value.Trim();
+        normalized = new string(normalized.Where(character => character is >= ' ' and <= '~' && character != '|').ToArray());
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            normalized = defaultValue;
+        }
+
+        return normalized.Length <= 16 ? normalized : normalized[..16];
     }
 
     private void SetPreference(string key, bool value, bool defaultValue)

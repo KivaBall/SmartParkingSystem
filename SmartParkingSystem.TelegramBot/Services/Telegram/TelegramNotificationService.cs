@@ -134,7 +134,7 @@ public sealed class TelegramNotificationService(
                 or EventKind.AllowedCardsChanged
                 or EventKind.BlockedCardsChanged => TelegramNotificationKind.Admin,
             EventKind.ControllerConnected or EventKind.ControllerDisconnected => TelegramNotificationKind.Connection,
-            EventKind.CameraSnapshotCaptured => TelegramNotificationKind.Camera,
+            EventKind.CameraSnapshotCaptured or EventKind.CameraAccessAttempt => TelegramNotificationKind.Camera,
             _ => eventItem.Category switch
             {
                 EventCategory.Gate => TelegramNotificationKind.Gate,

@@ -39,4 +39,5 @@ public interface IDeviceCommandService
     Task<DeviceCommandResult> SetDisplayBlockedTextAsync(string text, CancellationToken cancellationToken = default);
     Task<DeviceCommandResult> SetDisplayInvalidTextAsync(string text, CancellationToken cancellationToken = default);
     Task<DeviceCommandResult> SetDisplayLockedTextAsync(string text, CancellationToken cancellationToken = default);
+    Task<DeviceCommandResult> ShowDisplayMessageAsync(string text, CancellationToken cancellationToken = default);
 }

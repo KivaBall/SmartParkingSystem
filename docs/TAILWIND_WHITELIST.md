@@ -158,6 +158,7 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 - `lg:grid-cols-[1fr_auto]`
 - `lg:grid-cols-[0.75fr_1.25fr]`
 - `lg:items-center`
+- `lg:items-start`
 - `lg:items-stretch`
 - `lg:justify-start`
 - `lg:p-10`
@@ -188,6 +189,7 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 - `hover:bg-calm-200`
 - `disabled:cursor-default`
 - `disabled:opacity-50`
+- `disabled:opacity-70`
 
 ## Allowed Animation Classes
 
@@ -200,6 +202,7 @@ If a class is not listed here, it should be treated as disallowed until reviewed
 - `animate-exit-left`
 - `animate-exit-right`
 - `animate-exit-bottom`
+- `animate-pulse`
 
 ## Allowed Form Classes
 

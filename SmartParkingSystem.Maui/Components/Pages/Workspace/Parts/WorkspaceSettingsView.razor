@@ -3,7 +3,7 @@
 @using SmartParkingSystem.Maui.Components.Pages.Connection.Parts
 @inherits WorkspaceSettingsViewBase
 
-<section class="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+<section class="grid gap-4 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
     <div class="grid gap-4">
         <article class="@CurrentDeviceClass" style="@CurrentDeviceStyle">
             <div class="mb-8 flex items-center justify-center gap-3">
@@ -98,13 +98,67 @@
                     </div>
                 </div>
 
-                <label class="grid gap-2">
-                    <span class="text-sm font-semibold text-calm-500">@Texts.BackendBaseUrlLabel</span>
-                    <input class="min-h-12 rounded-md bg-brand-100/70 px-4 py-3 text-sm font-semibold text-calm-900 outline-none transition-all duration-500 ease-out"
-                           value="@BackendBaseUrl"
-                           placeholder="@Texts.BackendBaseUrlPlaceholder"
-                           @onchange="OnBackendBaseUrlChanged"/>
-                </label>
+                <div class="rounded-md bg-white px-4 py-4">
+                    <label class="grid gap-2">
+                        <span class="text-sm font-semibold text-calm-500">@Texts.BackendBaseUrlLabel</span>
+                        <span class="flex gap-2">
+                            <input class="min-h-12 min-w-0 flex-1 rounded-md bg-brand-100/70 px-4 py-3 text-sm font-semibold text-calm-900 outline-none transition-all duration-500 ease-out disabled:opacity-70"
+                                   value="@BackendBaseUrl"
+                                   placeholder="@Texts.BackendBaseUrlPlaceholder"
+                                   disabled="@IsTestingBackend"
+                                   @onchange="OnBackendBaseUrlChanged"/>
+                            <button class="@GetIconTestButtonClass(IsTestingBackend)"
+                                    type="button"
+                                    title="@Texts.TestConnectionButtonLabel"
+                                    disabled="@IsTestingBackend"
+                                    @onclick="TestBackendAsync">
+                                <i data-lucide="activity"></i>
+                            </button>
+                        </span>
+                    </label>
+                    @if (!string.IsNullOrWhiteSpace(BackendTestStatus))
+                    {
+                        <p class="mt-2 rounded-md bg-brand-100/70 px-4 py-3 text-sm font-semibold text-calm-700">@BackendTestStatus</p>
+                    }
+                </div>
+
+                <div class="rounded-md bg-white px-4 py-4">
+                    <div class="flex items-center justify-between gap-3 rounded-md bg-calm-50 px-4 py-4">
+                        <div>
+                            <p class="text-sm font-semibold text-calm-900">@Texts.OpenAiUsageLabel</p>
+                        </div>
+
+                        <button class="@GetBackendToggleButtonClass(OpenAiUsageEnabled)"
+                                type="button"
+                                @onclick="ToggleOpenAiUsageAsync">
+                            <span>@(OpenAiUsageEnabled ? Texts.EnabledLabel : Texts.DisabledLabel)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="rounded-md bg-white px-4 py-4">
+                    <label class="grid gap-2">
+                        <span class="text-sm font-semibold text-calm-500">@Texts.OpenAiApiKeyLabel</span>
+                        <span class="flex gap-2">
+                            <input class="min-h-12 min-w-0 flex-1 rounded-md bg-brand-100/70 px-4 py-3 text-sm font-semibold text-calm-900 outline-none transition-all duration-500 ease-out disabled:opacity-70"
+                                   type="password"
+                                   autocomplete="off"
+                                   disabled="@IsTestingAi"
+                                   @bind="OpenAiApiKey"/>
+                            <button class="@GetIconTestButtonClass(IsTestingAi)"
+                                    type="button"
+                                    title="@Texts.TestConnectionButtonLabel"
+                                    disabled="@IsTestingAi"
+                                    @onclick="TestOpenAiAsync">
+                                <i data-lucide="activity"></i>
+                            </button>
+                        </span>
+                    </label>
+                    @if (!string.IsNullOrWhiteSpace(OpenAiTestStatus))
+                    {
+                        <p class="mt-2 rounded-md bg-brand-100/70 px-4 py-3 text-sm font-semibold text-calm-700">@OpenAiTestStatus</p>
+                    }
+                </div>
             </div>
         </article>
     </div>

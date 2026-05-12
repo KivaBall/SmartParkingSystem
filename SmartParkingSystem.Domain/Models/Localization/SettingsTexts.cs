@@ -18,4 +18,11 @@ public sealed record SettingsTexts(
     string BackendTitle,
     string BackendSyncEnabledLabel,
     string BackendBaseUrlLabel,
-    string BackendBaseUrlPlaceholder);
+    string BackendBaseUrlPlaceholder,
+    string BackendTestingMessage,
+    string BackendTestSuccessMessage,
+    string BackendTestFailedMessage,
+    string OpenAiUsageLabel,
+    string OpenAiApiKeyLabel,
+    string OpenAiTestingMessage,
+    string TestConnectionButtonLabel);

@@ -124,6 +124,7 @@ public class WorkspaceEventsViewBase : ComponentBase, IDisposable
                 Texts.ParkingSlotAvailabilityChangedTitleFormat,
                 item.Subject ?? string.Empty),
             EventKind.CameraSnapshotCaptured => Texts.CameraSnapshotCapturedTitle,
+            EventKind.CameraAccessAttempt => Texts.CameraAccessAttemptTitle,
             EventKind.AllowedCardsChanged => Texts.AllowedCardsChangedTitle,
             EventKind.BlockedCardsChanged => Texts.BlockedCardsChangedTitle,
             _ => string.Empty
@@ -175,6 +176,9 @@ public class WorkspaceEventsViewBase : ComponentBase, IDisposable
             EventKind.ParkingSlotAvailabilityChanged => $"{item.Subject}: {
                 ParseBooleanTransition(item.PreviousValue, item.CurrentValue)}",
             EventKind.CameraSnapshotCaptured => GetCameraSnapshotDescription(item),
+            EventKind.CameraAccessAttempt => string.IsNullOrWhiteSpace(item.Subject)
+                ? item.CurrentValue ?? string.Empty
+                : $"{item.Subject}: {item.CurrentValue}",
             EventKind.AllowedCardsChanged => FormatTransition(item.PreviousValue, item.CurrentValue),
             EventKind.BlockedCardsChanged => FormatTransition(item.PreviousValue, item.CurrentValue),
             _ => string.Empty

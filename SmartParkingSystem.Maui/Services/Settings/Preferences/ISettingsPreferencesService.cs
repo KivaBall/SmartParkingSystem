@@ -6,6 +6,17 @@ public interface ISettingsPreferencesService
     bool CameraAutoSnapshotEnabled { get; set; }
     int CameraAutoSnapshotDelayMs { get; set; }
     bool KeepCameraEnabledOutsideGate { get; set; }
+    bool CameraAiAccessScanEnabled { get; set; }
+    bool CameraAiAllowUnknownVehicles { get; set; }
+    bool CameraAiCaptureMissingRfidDescriptionsEnabled { get; set; }
+    bool OpenAiUsageEnabled { get; set; }
+    string CameraAiApiKey { get; set; }
+    string CameraAiLastStatus { get; set; }
+    string CameraLcdUnavailableText { get; set; }
+    string CameraLcdUnrecognizedText { get; set; }
+    string CameraLcdAiUnavailableText { get; set; }
+    string CameraLcdUnknownDeniedText { get; set; }
+    string CameraLcdAllowedText { get; set; }
     bool BackendSyncEnabled { get; set; }
     string BackendBaseUrl { get; set; }
     event Action? PreferencesChanged;

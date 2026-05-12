@@ -617,6 +617,7 @@ public sealed class TelegramMenuService
             EventKind.ParkingSlotChanged => Localize(language, "Стан", "State"),
             EventKind.ParkingSlotAvailabilityChanged => Localize(language, "Доступність", "Availability"),
             EventKind.CameraSnapshotCaptured => Localize(language, "Знімок", "Snapshot"),
+            EventKind.CameraAccessAttempt => Localize(language, "AI-в'їзд", "AI access"),
             EventKind.AllowedCardsChanged => Localize(language, "Дозволені картки", "Allowed cards"),
             EventKind.BlockedCardsChanged => Localize(language, "Заблоковані картки", "Blocked cards"),
             _ => LocalizeEventKind(kind, language)
@@ -703,8 +704,8 @@ public sealed class TelegramMenuService
                 "Auto-close after passage"),
             EventKind.GatePassageThresholdChanged => Localize(
                 language,
-                "Поріг датчика проїзду",
-                "Gate passage threshold"),
+                "Поріг датчиків проїзду",
+                "Gate passage sensors threshold"),
             EventKind.MonitorForceModeChanged => Localize(language, "Режим монітора", "Monitor mode"),
             EventKind.MonitorTextChanged => Localize(language, "Текст монітора", "Monitor text"),
             EventKind.MonitorTemplateChanged => Localize(language, "Шаблон монітора", "Monitor template"),
@@ -719,6 +720,7 @@ public sealed class TelegramMenuService
                 "Доступність паркомісця",
                 "Parking slot availability"),
             EventKind.CameraSnapshotCaptured => Localize(language, "Знімок камери", "Camera snapshot"),
+            EventKind.CameraAccessAttempt => Localize(language, "AI-сканування в'їзду", "AI entry scan"),
             EventKind.AllowedCardsChanged => Localize(language, "Список дозволених карток", "Allowed cards list"),
             EventKind.BlockedCardsChanged => Localize(language, "Список заблокованих карток", "Blocked cards list"),
             _ => kind.ToString()

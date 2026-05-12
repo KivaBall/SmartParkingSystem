@@ -8,6 +8,8 @@
 
 > Поточна прошивка (`SmartParkingSystemController.ino`) орієнтована на Mega-розкладку, зокрема на LED-маршрути `D22/D23/D24`, яких на Uno/Nano фізично немає.
 
+> Camera AI RFID update: the current feature set also needs a fifth HC-SR04 sensor before the gate on Mega pins `D25/D26`, larger allowed/blocked RFID card capacity, and extra telemetry fields (`front_occupied`, `front_distance_cm`, `front_counter`). Treat Uno/Nano as legacy documentation only; do not try to wire the current AI/route LED build from this file.
+
 ---
 
 ## Зміст
@@ -505,7 +507,7 @@ CONFIG SAVE
 | `CONFIG TELEMETRY_MS 500` | Інтервал телеметрії в мілісекундах |
 | `CONFIG AUTO_EXIT_OPEN ON` / `OFF` | Увімкнути/вимкнути автовідкриття при наближенні машини |
 | `CONFIG AUTO_CLOSE_AFTER_PASS ON` / `OFF` | Увімкнути/вимкнути автозакриття після проїзду |
-| `CONFIG PASSAGE_THRESHOLD_CM 20` | Поріг датчика проїзду воріт |
+| `CONFIG PASSAGE_THRESHOLD_CM 20` | Поріг датчиків проїзду воріт |
 | `CONFIG SAVE` | Записати в EEPROM (інакше після перезавантаження все скинеться!) |
 | `CONFIG RESET` | Скинути все на дефолт |
 | `PARKING ENABLE 1` / `PARKING DISABLE 1` | Увімкнути/вимкнути конкретний слот (1–6) |

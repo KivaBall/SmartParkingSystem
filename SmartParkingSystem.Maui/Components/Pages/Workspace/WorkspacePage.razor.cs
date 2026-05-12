@@ -3,6 +3,7 @@ using Microsoft.JSInterop;
 using SmartParkingSystem.Domain.Models.Localization;
 using SmartParkingSystem.Domain.Models.Navigation;
 using SmartParkingSystem.Maui.Services.Camera;
+using SmartParkingSystem.Maui.Services.CameraAi;
 using SmartParkingSystem.Maui.Services.Localization;
 
 namespace SmartParkingSystem.Maui.Components.Pages.Workspace;
@@ -20,6 +21,9 @@ public class WorkspacePageBase : ComponentBase, IDisposable
 
     [Inject]
     protected IEntryCameraService? EntryCameraService { get; set; }
+
+    [Inject]
+    protected ICameraAiRfidAccessService? CameraAiRfidAccessService { get; set; }
 
     protected WorkspacePageState State { get; } = new WorkspacePageState();
 
@@ -77,6 +81,7 @@ public class WorkspacePageBase : ComponentBase, IDisposable
     {
         RequireLocalizationService().LanguageChanged += OnLanguageChanged;
         _ = RequireEntryCameraService();
+        _ = RequireCameraAiRfidAccessService();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -180,6 +185,12 @@ public class WorkspacePageBase : ComponentBase, IDisposable
     private IEntryCameraService RequireEntryCameraService()
     {
         return EntryCameraService ?? throw new InvalidOperationException("Entry camera service is not available.");
+    }
+
+    private ICameraAiRfidAccessService RequireCameraAiRfidAccessService()
+    {
+        return CameraAiRfidAccessService ??
+               throw new InvalidOperationException("Camera AI RFID access service is not available.");
     }
 
     private void OnLanguageChanged()

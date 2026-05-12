@@ -81,6 +81,29 @@ public sealed class EventsService : IEventsService, IDisposable
         }
     }
 
+    public void AddCameraAccessEvent(
+        string subject,
+        string result,
+        string? description,
+        string? attachmentDataUrl)
+    {
+        var currentValue = string.IsNullOrWhiteSpace(description)
+            ? result
+            : $"{result} | {description}";
+
+        lock (_eventsSync)
+        {
+            AddEvent(
+                EventCategory.Camera,
+                EventKind.CameraAccessAttempt,
+                subject,
+                currentValue: currentValue,
+                attachmentDataUrl: attachmentDataUrl);
+            PruneStoredEvents();
+            PersistEvents();
+        }
+    }
+
     public IReadOnlyList<EventFeedItem> GetBackendSyncEvents()
     {
         lock (_eventsSync)
@@ -370,7 +393,9 @@ public sealed class EventsService : IEventsService, IDisposable
 
     private void PersistEvents()
     {
-        _memoryStore.SetEvents(_events);
+        _memoryStore.SetEvents(_events
+            .Select(item => item with { AttachmentDataUrl = null })
+            .ToArray());
     }
 
     private static IReadOnlyList<EventFeedItem> LimitAttachmentPayload(IReadOnlyList<EventFeedItem> events)

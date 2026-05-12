@@ -32,6 +32,7 @@ public sealed record EventsTexts(
     string ParkingSlotChangedTitleFormat,
     string ParkingSlotAvailabilityChangedTitleFormat,
     string CameraSnapshotCapturedTitle,
+    string CameraAccessAttemptTitle,
     string AllowedCardsChangedTitle,
     string BlockedCardsChangedTitle,
     string ForcedMonitorTemplateLabel,

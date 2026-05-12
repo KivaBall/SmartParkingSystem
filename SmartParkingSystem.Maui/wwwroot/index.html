@@ -239,7 +239,7 @@
                 detachVideo(getOptionalVideo(videoId));
                 stop();
             },
-            capture: (videoId) => {
+            capture: (videoId, maxSide) => {
                 const video = getOptionalVideo(videoId);
                 const captureSource = video?.readyState >= 2 ? video : hiddenVideo;
                 if (!stream || !captureSource || captureSource.readyState < 2) {
@@ -247,8 +247,13 @@
                 }
 
                 const canvas = document.createElement("canvas");
-                canvas.width = captureSource.videoWidth;
-                canvas.height = captureSource.videoHeight;
+                const sourceWidth = captureSource.videoWidth;
+                const sourceHeight = captureSource.videoHeight;
+                const scale = maxSide && Math.max(sourceWidth, sourceHeight) > maxSide
+                    ? maxSide / Math.max(sourceWidth, sourceHeight)
+                    : 1;
+                canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+                canvas.height = Math.max(1, Math.round(sourceHeight * scale));
                 const context = canvas.getContext("2d");
                 context.drawImage(captureSource, 0, 0, canvas.width, canvas.height);
                 return canvas.toDataURL("image/jpeg", 0.88);

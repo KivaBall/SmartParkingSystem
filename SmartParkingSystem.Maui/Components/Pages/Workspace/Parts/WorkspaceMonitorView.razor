@@ -91,7 +91,7 @@ else
                     </button>
                 </div>
 
-                <div class="grid gap-3 lg:grid-cols-[0.75fr_1.25fr]">
+                <div class="grid gap-3 workspace-monitor-texts">
                     <div class="rounded-md bg-white px-4 py-4">
                         <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.ForceModeLabel</p>
                         <button class="inline-flex min-h-12 w-full items-center justify-center rounded-md px-4 py-3 text-sm font-semibold transition-all duration-500 ease-out @(EditableSettings.ForceEnabled ? "bg-brand-200 text-calm-900 hover:bg-brand-400" : "bg-calm-50 text-calm-700 hover:bg-calm-100")"
@@ -139,6 +139,41 @@ else
                         <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
                                maxlength="16"
                                @bind="EditableSettings.LockedText"/>
+                    </div>
+
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.CameraLcdUnavailableTextLabel</p>
+                        <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                               maxlength="16"
+                               @bind="CameraLcdUnavailableText"/>
+                    </div>
+
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.CameraLcdUnrecognizedTextLabel</p>
+                        <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                               maxlength="16"
+                               @bind="CameraLcdUnrecognizedText"/>
+                    </div>
+
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.CameraLcdAiUnavailableTextLabel</p>
+                        <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                               maxlength="16"
+                               @bind="CameraLcdAiUnavailableText"/>
+                    </div>
+
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.CameraLcdUnknownDeniedTextLabel</p>
+                        <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                               maxlength="16"
+                               @bind="CameraLcdUnknownDeniedText"/>
+                    </div>
+
+                    <div class="rounded-md bg-white px-4 py-4">
+                        <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.CameraLcdAllowedTextLabel</p>
+                        <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
+                               maxlength="16"
+                               @bind="CameraLcdAllowedText"/>
                     </div>
                 </div>
             </div>
