@@ -141,6 +141,9 @@ internal static class DeviceProtocolParser
                 telemetryMs,
                 passageOccupied,
                 passageDistanceCm,
+                TryGetOptionalBool(values, "front_occupied"),
+                TryGetOptionalInt(values, "front_distance_cm"),
+                TryGetOptionalInt(values, "front_counter"),
                 displayText,
                 displayForced,
                 slots,
@@ -370,6 +373,11 @@ internal static class DeviceProtocolParser
         return values.TryGetValue(key, out var rawValue) && int.TryParse(rawValue, out var value)
             ? value
             : 0;
+    }
+
+    private static bool TryGetOptionalBool(Dictionary<string, string> values, string key)
+    {
+        return values.TryGetValue(key, out var rawValue) && rawValue == "1";
     }
 
     private static bool TryGetRequiredLong(

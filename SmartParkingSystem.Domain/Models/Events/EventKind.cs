@@ -21,6 +21,7 @@ public enum EventKind
     ParkingSlotChanged,
     ParkingSlotAvailabilityChanged,
     CameraSnapshotCaptured,
+    CameraAccessAttempt,
     AllowedCardsChanged,
     BlockedCardsChanged
 }

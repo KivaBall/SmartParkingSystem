@@ -5,6 +5,7 @@ using SmartParkingSystem.Domain.Models.Monitor;
 using SmartParkingSystem.Maui.Services.DeviceConnection.Session;
 using SmartParkingSystem.Maui.Services.Localization;
 using SmartParkingSystem.Maui.Services.Monitor;
+using SmartParkingSystem.Maui.Services.Settings.Preferences;
 
 namespace SmartParkingSystem.Maui.Components.Pages.Workspace.Parts;
 
@@ -18,6 +19,9 @@ public class WorkspaceMonitorViewBase : ComponentBase, IDisposable
 
     [Inject]
     protected IDeviceSessionService? DeviceSessionService { get; set; }
+
+    [Inject]
+    protected ISettingsPreferencesService? SettingsPreferencesService { get; set; }
 
     [Parameter]
     public bool IsExiting { get; set; }
@@ -35,6 +39,35 @@ public class WorkspaceMonitorViewBase : ComponentBase, IDisposable
     protected MonitorTexts Texts => RequireLocalizationService().GetMonitorTexts();
     protected bool HasChanges => IsDirty();
     protected string StatusText => string.IsNullOrWhiteSpace(StatusMessage) ? Texts.ValidationHint : StatusMessage;
+    protected string CameraLcdUnavailableText
+    {
+        get => RequireSettingsPreferencesService().CameraLcdUnavailableText;
+        set => RequireSettingsPreferencesService().CameraLcdUnavailableText = value;
+    }
+
+    protected string CameraLcdUnrecognizedText
+    {
+        get => RequireSettingsPreferencesService().CameraLcdUnrecognizedText;
+        set => RequireSettingsPreferencesService().CameraLcdUnrecognizedText = value;
+    }
+
+    protected string CameraLcdAiUnavailableText
+    {
+        get => RequireSettingsPreferencesService().CameraLcdAiUnavailableText;
+        set => RequireSettingsPreferencesService().CameraLcdAiUnavailableText = value;
+    }
+
+    protected string CameraLcdUnknownDeniedText
+    {
+        get => RequireSettingsPreferencesService().CameraLcdUnknownDeniedText;
+        set => RequireSettingsPreferencesService().CameraLcdUnknownDeniedText = value;
+    }
+
+    protected string CameraLcdAllowedText
+    {
+        get => RequireSettingsPreferencesService().CameraLcdAllowedText;
+        set => RequireSettingsPreferencesService().CameraLcdAllowedText = value;
+    }
 
     protected string DisplayText =>
         !string.IsNullOrWhiteSpace(Snapshot.CurrentText)
@@ -196,6 +229,12 @@ public class WorkspaceMonitorViewBase : ComponentBase, IDisposable
     private IDeviceSessionService RequireDeviceSessionService()
     {
         return DeviceSessionService ?? throw new InvalidOperationException("Device session service is not available.");
+    }
+
+    private ISettingsPreferencesService RequireSettingsPreferencesService()
+    {
+        return SettingsPreferencesService ??
+               throw new InvalidOperationException("Settings preferences service is not available.");
     }
 
     private void OnSessionChanged(DeviceControllerSession? session)

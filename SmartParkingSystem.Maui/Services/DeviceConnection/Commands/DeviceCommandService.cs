@@ -333,6 +333,18 @@ public sealed class DeviceCommandService(
             ["ERR|DISPLAY|MISSING_TEXT_KEY", "ERR|DISPLAY|UNKNOWN_TEXT_KEY"]);
     }
 
+    public Task<DeviceCommandResult> ShowDisplayMessageAsync(
+        string text,
+        CancellationToken cancellationToken = default)
+    {
+        return SendCommandAsync(
+            $"DISPLAY SHOW {NormalizeDisplayText(text)}",
+            "DISPLAY",
+            "OK|DISPLAY|SHOWN",
+            cancellationToken,
+            ["ERR|DISPLAY|MISSING_SHOW_TEXT"]);
+    }
+
     private Task<DeviceCommandResult> SendCommandAsync(
         string command,
         string expectedScope,

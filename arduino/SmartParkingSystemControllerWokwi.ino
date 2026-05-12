@@ -45,13 +45,14 @@ Servo gateServo;
 // -----------------------------------------------------------------------------
 constexpr uint8_t SERVO_PIN = 5;
 constexpr uint8_t SLOT_COUNT = 6;
-constexpr uint8_t MAX_CARD_COUNT = 3;
+constexpr uint8_t MAX_ALLOWED_CARD_COUNT = 12;
+constexpr uint8_t MAX_BLOCKED_CARD_COUNT = 4;
 constexpr uint8_t UID_LENGTH = 4;
 constexpr uint8_t DISPLAY_TEXT_LENGTH = 16;
 constexpr uint8_t NO_PIN = 255;
 constexpr long COMM_BAUD_RATE = 9600;
 constexpr uint16_t CONFIG_SIGNATURE = 0x5350;
-constexpr uint8_t CONFIG_VERSION = 5;
+constexpr uint8_t CONFIG_VERSION = 6;
 constexpr unsigned long LCD_MESSAGE_DURATION_MS = 3000UL;
 constexpr uint16_t EEPROM_ADDRESS = 0;
 constexpr size_t RX_BUFFER_SIZE = 40;
@@ -71,6 +72,8 @@ const uint8_t trigPins[SLOT_COUNT] = {7, 4, A0, NO_PIN, NO_PIN, NO_PIN};
 const uint8_t echoPins[SLOT_COUNT] = {8, 6, A1, NO_PIN, NO_PIN, NO_PIN};
 constexpr uint8_t GATE_PASSAGE_TRIG_PIN = A2;
 constexpr uint8_t GATE_PASSAGE_ECHO_PIN = A3;
+constexpr uint8_t FRONT_ACCESS_TRIG_PIN = 25;
+constexpr uint8_t FRONT_ACCESS_ECHO_PIN = 26;
 
 // Addressable LED route strips. Use Arduino Mega pins: one strip guides to one physical slot.
 const uint8_t routeLedPins[ROUTE_LED_STRIP_COUNT] = {22, 23, 24};
@@ -123,10 +126,10 @@ struct PersistedConfig
     char displayLockedText[DISPLAY_TEXT_LENGTH + 1];
 
     uint8_t allowedCount;
-    byte allowedCards[MAX_CARD_COUNT][UID_LENGTH];
+    byte allowedCards[MAX_ALLOWED_CARD_COUNT][UID_LENGTH];
 
     uint8_t blockedCount;
-    byte blockedCards[MAX_CARD_COUNT][UID_LENGTH];
+    byte blockedCards[MAX_BLOCKED_CARD_COUNT][UID_LENGTH];
 };
 
 PersistedConfig config;
@@ -150,6 +153,12 @@ bool gatePassageAutoCloseArmed = false;
 bool gatePassageVehicleSeen = false;
 uint8_t gatePassageStableReads = 0;
 int16_t gatePassageDistanceCm = -1;
+bool frontAccessOccupied = false;
+bool previousFrontAccessOccupied = false;
+bool pendingFrontAccessOccupied = false;
+uint8_t frontAccessStableReads = 0;
+int16_t frontAccessDistanceCm = -1;
+uint16_t frontAccessCounter = 0;
 unsigned long lastAutoExitOpenAt = 0;
 
 unsigned long slotOccupiedSince[SLOT_COUNT] = {0};
@@ -174,6 +183,7 @@ void loadConfig();
 void saveConfig();
 void applyGateOutput();
 void updateGateMode();
+void updateFrontAccessSensorState();
 void updateGatePassageState();
 void updateGatePassageAutomation();
 void updateParkingStates();
@@ -211,7 +221,7 @@ void handleRfid();
 bool compareUid(const byte *uid, const byte list[][UID_LENGTH], byte count);
 bool parseUidHex(const char *value, byte outUid[UID_LENGTH]);
 int findUid(const byte target[UID_LENGTH], const byte list[][UID_LENGTH], byte count);
-bool addUid(byte list[][UID_LENGTH], byte &count, const byte uid[UID_LENGTH]);
+bool addUid(byte list[][UID_LENGTH], byte &count, const byte uid[UID_LENGTH], byte capacity);
 bool removeUid(byte list[][UID_LENGTH], byte &count, const byte uid[UID_LENGTH]);
 void printUidHex(Stream &stream, const byte uid[UID_LENGTH]);
 const __FlashStringHelper *getGateModeText();
@@ -253,10 +263,13 @@ void setup()
 
     pinMode(GATE_PASSAGE_TRIG_PIN, OUTPUT);
     pinMode(GATE_PASSAGE_ECHO_PIN, INPUT);
+    pinMode(FRONT_ACCESS_TRIG_PIN, OUTPUT);
+    pinMode(FRONT_ACCESS_ECHO_PIN, INPUT);
     setupRouteLedStrips();
 
     loadConfig();
 
+    updateFrontAccessSensorState();
     updateGatePassageState();
     updateGateMode();
     updateParkingStates();
@@ -477,6 +490,38 @@ void applyGateOutput()
     else
     {
         gateServo.write(config.servoClosedAngle);
+    }
+}
+
+void updateFrontAccessSensorState()
+{
+    previousFrontAccessOccupied = frontAccessOccupied;
+
+    long distance = readDistanceCm(FRONT_ACCESS_TRIG_PIN, FRONT_ACCESS_ECHO_PIN);
+    frontAccessDistanceCm = distance;
+    bool measuredOccupied = distance != -1 && distance < config.gatePassageThresholdCm;
+
+    if (measuredOccupied == pendingFrontAccessOccupied)
+    {
+        if (frontAccessStableReads < GATE_PASSAGE_STABILITY_READS)
+        {
+            frontAccessStableReads++;
+        }
+    }
+    else
+    {
+        pendingFrontAccessOccupied = measuredOccupied;
+        frontAccessStableReads = 1;
+    }
+
+    if (frontAccessStableReads >= GATE_PASSAGE_STABILITY_READS)
+    {
+        frontAccessOccupied = pendingFrontAccessOccupied;
+    }
+
+    if (frontAccessOccupied && !previousFrontAccessOccupied)
+    {
+        frontAccessCounter++;
     }
 }
 
@@ -760,7 +805,7 @@ void sendHello()
 void sendProfile()
 {
     beginProtocolFrame();
-    COMM.print(F("PROFILE|board=ArduinoMega|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=SERIAL|slots=6|route_led_strips=3"));
+    COMM.print(F("PROFILE|board=ArduinoMega|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=SERIAL|slots=6|route_led_strips=3|front_sensor=1"));
     endProtocolFrame();
 }
 
@@ -849,6 +894,12 @@ void sendTelemetry()
     COMM.print(gatePassageOccupied ? 1 : 0);
     COMM.print(F("|passage_distance_cm="));
     COMM.print(gatePassageDistanceCm);
+    COMM.print(F("|front_occupied="));
+    COMM.print(frontAccessOccupied ? 1 : 0);
+    COMM.print(F("|front_distance_cm="));
+    COMM.print(frontAccessDistanceCm);
+    COMM.print(F("|front_counter="));
+    COMM.print(frontAccessCounter);
     COMM.print(F("|last_access_uid="));
     COMM.print(lastAccessUid);
     COMM.print(F("|last_access_result="));
@@ -1375,16 +1426,19 @@ void handleCardsCommand(char *context)
 
     byte (*targetList)[UID_LENGTH] = nullptr;
     byte *targetCount = nullptr;
+    byte targetCapacity = 0;
 
     if (strcmp(listType, "ALLOWED") == 0)
     {
         targetList = config.allowedCards;
         targetCount = &config.allowedCount;
+        targetCapacity = MAX_ALLOWED_CARD_COUNT;
     }
     else if (strcmp(listType, "BLOCKED") == 0)
     {
         targetList = config.blockedCards;
         targetCount = &config.blockedCount;
+        targetCapacity = MAX_BLOCKED_CARD_COUNT;
     }
     else
     {
@@ -1415,7 +1469,7 @@ void handleCardsCommand(char *context)
 
     if (strcmp(action, "ADD") == 0)
     {
-        if (addUid(targetList, *targetCount, uid))
+        if (addUid(targetList, *targetCount, uid, targetCapacity))
         {
             sendOk("CARDS", strcmp(listType, "ALLOWED") == 0 ? "ALLOWED_ADDED" : "BLOCKED_ADDED");
         }
@@ -1475,6 +1529,26 @@ void handleDisplayCommand(char *context)
 
         updateDisplayState();
         sendOk(F("DISPLAY"), F("FORCE_UPDATED"));
+        return;
+    }
+
+    if (strcmp(action, "SHOW") == 0)
+    {
+        if (context == nullptr)
+        {
+            sendError(F("DISPLAY"), F("MISSING_SHOW_TEXT"));
+            return;
+        }
+
+        trimLine(context);
+        if (context[0] == '\0')
+        {
+            sendError(F("DISPLAY"), F("MISSING_SHOW_TEXT"));
+            return;
+        }
+
+        setTransientDisplayText(context);
+        sendOk(F("DISPLAY"), F("SHOWN"));
         return;
     }
 
@@ -1672,9 +1746,9 @@ int findUid(const byte target[UID_LENGTH], const byte list[][UID_LENGTH], byte c
     return -1;
 }
 
-bool addUid(byte list[][UID_LENGTH], byte &count, const byte uid[UID_LENGTH])
+bool addUid(byte list[][UID_LENGTH], byte &count, const byte uid[UID_LENGTH], byte capacity)
 {
-    if (count >= MAX_CARD_COUNT || findUid(uid, list, count) != -1)
+    if (count >= capacity || findUid(uid, list, count) != -1)
     {
         return false;
     }

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Components;
 using SmartParkingSystem.Domain.Models.Admin;
 using SmartParkingSystem.Domain.Models.DeviceConnection;
 using SmartParkingSystem.Domain.Models.Localization;
+using SmartParkingSystem.Domain.Models.Parking;
+using SmartParkingSystem.Maui.Services.AppMemory;
 using SmartParkingSystem.Maui.Services.Admin;
 using SmartParkingSystem.Maui.Services.DeviceConnection.Session;
 using SmartParkingSystem.Maui.Services.Localization;
@@ -22,6 +24,9 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
 
     [Inject]
     protected ISettingsPreferencesService? SettingsPreferencesService { get; set; }
+
+    [Inject]
+    protected IAppMemoryStore? AppMemoryStore { get; set; }
 
     [Parameter]
     public bool IsExiting { get; set; }
@@ -63,6 +68,11 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
     protected AdminTexts Texts => RequireLocalizationService().GetAdminTexts();
     protected SettingsTexts SettingsTexts => RequireLocalizationService().GetSettingsTexts();
     protected bool HasChanges => IsDirty();
+    protected IReadOnlyList<AdminCardDescriptionRow> AllowedCardRows =>
+        BuildCardRows(EditableSettings.AllowedCardsText);
+
+    protected IReadOnlyList<AdminCardDescriptionRow> BlockedCardRows =>
+        BuildCardRows(EditableSettings.BlockedCardsText);
 
     protected bool EditParkingEnabled
     {
@@ -86,6 +96,24 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
     {
         get => RequireSettingsPreferencesService().KeepCameraEnabledOutsideGate;
         set => RequireSettingsPreferencesService().KeepCameraEnabledOutsideGate = value;
+    }
+
+    protected bool CameraAiAccessScanEnabled
+    {
+        get => RequireSettingsPreferencesService().CameraAiAccessScanEnabled;
+        set => RequireSettingsPreferencesService().CameraAiAccessScanEnabled = value;
+    }
+
+    protected bool CameraAiAllowUnknownVehicles
+    {
+        get => RequireSettingsPreferencesService().CameraAiAllowUnknownVehicles;
+        set => RequireSettingsPreferencesService().CameraAiAllowUnknownVehicles = value;
+    }
+
+    protected bool CameraAiCaptureMissingRfidDescriptionsEnabled
+    {
+        get => RequireSettingsPreferencesService().CameraAiCaptureMissingRfidDescriptionsEnabled;
+        set => RequireSettingsPreferencesService().CameraAiCaptureMissingRfidDescriptionsEnabled = value;
     }
 
     protected static string EditableClass => string.Empty;
@@ -122,10 +150,10 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
     protected string CameraSectionStyle => IsExiting ? "animation-delay: 120ms;" : "animation-delay: 600ms;";
 
     protected string SystemSectionClass => IsExiting
-        ? "rounded-md bg-warm-100 px-4 py-4 animate-exit-right"
-        : "rounded-md bg-warm-100 px-4 py-4 animate-page-enter-right opacity-0";
+        ? "rounded-md bg-warm-100 px-4 py-4 animate-exit-left"
+        : "rounded-md bg-warm-100 px-4 py-4 animate-page-enter-left opacity-0";
 
-    protected string SystemSectionStyle => IsExiting ? "animation-delay: 0ms;" : "animation-delay: 740ms;";
+    protected string SystemSectionStyle => IsExiting ? "animation-delay: 360ms;" : "animation-delay: 320ms;";
 
     public void Dispose()
     {
@@ -311,6 +339,78 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         KeepCameraEnabledOutsideGate = !KeepCameraEnabledOutsideGate;
     }
 
+    protected void ToggleCameraAiAccessScan()
+    {
+        CameraAiAccessScanEnabled = !CameraAiAccessScanEnabled;
+    }
+
+    protected void ToggleCameraAiAllowUnknownVehicles()
+    {
+        CameraAiAllowUnknownVehicles = !CameraAiAllowUnknownVehicles;
+    }
+
+    protected void ToggleCameraAiCaptureMissingRfidDescriptions()
+    {
+        CameraAiCaptureMissingRfidDescriptionsEnabled = !CameraAiCaptureMissingRfidDescriptionsEnabled;
+    }
+
+    protected void ClearVehicleDescription(string cardUid)
+    {
+        SaveVehicleDescription(cardUid, string.Empty);
+    }
+
+    protected void OnVehicleDescriptionChanged(string cardUid, ChangeEventArgs eventArgs)
+    {
+        SaveVehicleDescription(cardUid, eventArgs.Value?.ToString() ?? string.Empty);
+    }
+
+    private void SaveVehicleDescription(string cardUid, string? description)
+    {
+        var normalizedUid = NormalizeUid(cardUid);
+        if (normalizedUid is null)
+        {
+            return;
+        }
+
+        var trimmedDescription = string.IsNullOrWhiteSpace(description)
+            ? null
+            : description.Trim();
+        var profiles = RequireAppMemoryStore().GetSmartParkingCardProfiles().ToList();
+        var profileIndex = profiles.FindIndex(profile => string.Equals(
+            NormalizeUid(profile.CardUid),
+            normalizedUid,
+            StringComparison.OrdinalIgnoreCase));
+
+        if (profileIndex >= 0)
+        {
+            var profile = profiles[profileIndex];
+            profiles[profileIndex] = profile with
+            {
+                VehicleDescription = trimmedDescription,
+                DescriptionCreatedAt = trimmedDescription is null
+                    ? profile.DescriptionCreatedAt
+                    : profile.DescriptionCreatedAt ?? DateTimeOffset.UtcNow,
+                DescriptionSource = trimmedDescription is null
+                    ? profile.DescriptionSource
+                    : "admin-manual"
+            };
+        }
+        else if (trimmedDescription is not null)
+        {
+            profiles.Add(new SmartParkingCardProfile(
+                normalizedUid,
+                0,
+                0,
+                null,
+                trimmedDescription,
+                DateTimeOffset.UtcNow,
+                "admin-manual",
+                IsGeneratedFakeUid(normalizedUid)));
+        }
+
+        RequireAppMemoryStore().SetSmartParkingCardProfiles(profiles);
+    }
+
     private IAdminService RequireAdminService()
     {
         return AdminService ?? throw new InvalidOperationException("Admin service is not available.");
@@ -351,6 +451,53 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
                throw new InvalidOperationException("Settings preferences service is not available.");
     }
 
+    private IAppMemoryStore RequireAppMemoryStore()
+    {
+        return AppMemoryStore ?? throw new InvalidOperationException("App memory store is not available.");
+    }
+
+    private IReadOnlyList<AdminCardDescriptionRow> BuildCardRows(string cardsText)
+    {
+        var descriptions = RequireAppMemoryStore().GetSmartParkingCardProfiles()
+            .Select(profile => new
+            {
+                Uid = NormalizeUid(profile.CardUid),
+                profile.VehicleDescription
+            })
+            .Where(profile => profile.Uid is not null)
+            .ToDictionary(
+                profile => profile.Uid!,
+                profile => profile.VehicleDescription ?? string.Empty,
+                StringComparer.OrdinalIgnoreCase);
+
+        return cardsText.Split(
+                ['\r', '\n'],
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(NormalizeUid)
+            .Where(uid => uid is not null)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(uid => new AdminCardDescriptionRow(
+                uid!,
+                descriptions.GetValueOrDefault(uid!) ?? string.Empty))
+            .ToArray();
+    }
+
+    private static string? NormalizeUid(string? uid)
+    {
+        if (string.IsNullOrWhiteSpace(uid))
+        {
+            return null;
+        }
+
+        var compact = new string(uid.Where(char.IsAsciiHexDigit).ToArray()).ToUpperInvariant();
+        return compact.Length == 8 ? compact : null;
+    }
+
+    private static bool IsGeneratedFakeUid(string uid)
+    {
+        return uid.StartsWith("FA", StringComparison.OrdinalIgnoreCase);
+    }
+
     private void OnSessionChanged(DeviceControllerSession? session)
     {
         if (IsBusy || HasChanges)
@@ -371,4 +518,6 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
     {
         _ = InvokeAsync(StateHasChanged);
     }
+
+    protected sealed record AdminCardDescriptionRow(string CardUid, string VehicleDescription);
 }

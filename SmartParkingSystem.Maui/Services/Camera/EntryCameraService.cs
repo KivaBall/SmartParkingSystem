@@ -53,6 +53,7 @@ public sealed class EntryCameraService : IEntryCameraService, IDisposable
 
     public bool IsActive { get; private set; }
     public bool IsCapturing { get; private set; }
+    public string LastFailureReason { get; private set; } = string.Empty;
     public IReadOnlyList<CameraDeviceOption> Devices { get; private set; } = [];
     public string? SelectedDeviceId { get; set; }
     public event Action? StateChanged;
@@ -75,12 +76,15 @@ public sealed class EntryCameraService : IEntryCameraService, IDisposable
             {
                 SelectedDeviceId = Devices[0].Id;
             }
+
+            LastFailureReason = Devices.Count == 0 ? "No camera device was reported by the WebView." : string.Empty;
         }
-        catch
+        catch (Exception exception)
         {
             // Some platforms hide camera devices until permission is granted.
             Devices = [];
             SelectedDeviceId = null;
+            LastFailureReason = $"Camera device list failed: {exception.Message}";
         }
 
         NotifyStateChanged();
@@ -95,12 +99,14 @@ public sealed class EntryCameraService : IEntryCameraService, IDisposable
                 previewElementId,
                 string.IsNullOrWhiteSpace(SelectedDeviceId) ? null : SelectedDeviceId);
             IsActive = true;
+            LastFailureReason = string.Empty;
             await RefreshDevicesAsync();
         }
-        catch
+        catch (Exception exception)
         {
             // The gate view flashes the camera controls when start fails.
             IsActive = false;
+            LastFailureReason = $"Camera start failed: {exception.Message}";
             NotifyStateChanged();
         }
     }
@@ -154,6 +160,42 @@ public sealed class EntryCameraService : IEntryCameraService, IDisposable
         catch
         {
             // Preview detach is best-effort because the element can already be gone.
+        }
+    }
+
+    public async Task<string?> CaptureFrameDataUrlAsync(int maxSide = 768, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!IsActive)
+            {
+                await StartAsync(string.Empty);
+            }
+
+            if (!IsActive)
+            {
+                if (string.IsNullOrWhiteSpace(LastFailureReason))
+                {
+                    LastFailureReason = Devices.Count == 0
+                        ? "No camera device is available."
+                        : "Camera is disabled or permission was denied.";
+                }
+
+                return null;
+            }
+
+            var imageDataUrl = await _jsRuntime.InvokeAsync<string>(
+                "smartParkingCamera.capture",
+                cancellationToken,
+                string.Empty,
+                maxSide);
+            LastFailureReason = string.Empty;
+            return imageDataUrl;
+        }
+        catch (Exception exception)
+        {
+            LastFailureReason = $"Camera capture failed: {exception.Message}";
+            return null;
         }
     }
 

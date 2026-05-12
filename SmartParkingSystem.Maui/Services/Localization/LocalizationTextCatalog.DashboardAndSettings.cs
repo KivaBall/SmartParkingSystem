@@ -110,7 +110,14 @@ internal static partial class LocalizationTextCatalog
         "Backend",
         "Sync with backend",
         "Backend address",
-        "http://127.0.0.1:5112");
+        "http://127.0.0.1:5112",
+        "Testing backend...",
+        "Backend is available.",
+        "Backend test failed.",
+        "AI usage",
+        "OpenAI API key",
+        "Testing OpenAI...",
+        "Test connection");
 
     private static readonly SettingsTexts UkrainianSettingsTexts = new SettingsTexts(
         "Поточний пристрій",
@@ -130,7 +137,14 @@ internal static partial class LocalizationTextCatalog
         "Бекенд",
         "Синхронізація з бекендом",
         "Адреса бекенду",
-        "http://127.0.0.1:5112");
+        "http://127.0.0.1:5112",
+        "Перевіряємо бекенд...",
+        "Бекенд доступний.",
+        "Тест бекенду не пройшов.",
+        "Використання AI",
+        "OpenAI API ключ",
+        "Перевіряємо OpenAI...",
+        "Перевірити з'єднання");
 
     public static DashboardTexts GetDashboardTexts(AppLanguage language)
     {
