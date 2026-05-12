@@ -36,6 +36,17 @@ public sealed class OpenAiVehicleRecognitionService(
             return new VehicleAiRecognitionResult(false, VehicleAiRecognitionKind.Uncertain, null, string.Empty, "AI key is empty.");
         }
 
+        if (!IsSupportedImageDataUrl(imageDataUrl))
+        {
+            preferencesService.CameraAiLastStatus = "AI image is invalid before request.";
+            return new VehicleAiRecognitionResult(
+                false,
+                VehicleAiRecognitionKind.Uncertain,
+                null,
+                string.Empty,
+                "AI image is invalid before request.");
+        }
+
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/responses");
@@ -49,7 +60,7 @@ public sealed class OpenAiVehicleRecognitionService(
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                var status = $"AI request failed: {(int)response.StatusCode}.";
+                var status = $"AI request failed: {(int)response.StatusCode} {response.ReasonPhrase}.";
                 preferencesService.CameraAiLastStatus = status;
                 return new VehicleAiRecognitionResult(false, VehicleAiRecognitionKind.Uncertain, null, string.Empty, status);
             }
@@ -68,6 +79,45 @@ public sealed class OpenAiVehicleRecognitionService(
                 null,
                 string.Empty,
                 "AI service is unavailable.");
+        }
+    }
+
+    private static bool IsSupportedImageDataUrl(string imageDataUrl)
+    {
+        const string Base64Marker = ";base64,";
+        if (string.IsNullOrWhiteSpace(imageDataUrl))
+        {
+            return false;
+        }
+
+        var markerIndex = imageDataUrl.IndexOf(Base64Marker, StringComparison.OrdinalIgnoreCase);
+        if (markerIndex <= 0)
+        {
+            return false;
+        }
+
+        var mimeType = imageDataUrl[..markerIndex].Trim();
+        if (!string.Equals(mimeType, "data:image/jpeg", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(mimeType, "data:image/png", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(mimeType, "data:image/webp", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var payload = imageDataUrl[(markerIndex + Base64Marker.Length)..].Trim();
+        if (payload.Length < 64)
+        {
+            return false;
+        }
+
+        try
+        {
+            _ = Convert.FromBase64String(payload);
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
         }
     }
 
@@ -209,8 +259,10 @@ public sealed class OpenAiVehicleRecognitionService(
         if (element.ValueKind == JsonValueKind.Object)
         {
             if (element.TryGetProperty("type", out var type)
+                && type.ValueKind == JsonValueKind.String
                 && type.GetString() == "output_text"
-                && element.TryGetProperty("text", out var text))
+                && element.TryGetProperty("text", out var text)
+                && text.ValueKind == JsonValueKind.String)
             {
                 builder.AppendLine(text.GetString());
                 return;
