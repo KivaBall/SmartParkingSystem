@@ -9,7 +9,7 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
     private const int DefaultParkingSlotFloor = 1;
     private const int MaxParkingSlotFloor = 2;
     private const int MinParkingSlotFloor = 1;
-    private const string AndroidBackendBaseUrl = "http://10.0.2.2:5112";
+    private const string AndroidBackendBaseUrl = "http://10.0.2.2:5000";
     private const string BackendBaseUrlKey = "backend.base-url";
     private const string BackendSyncEnabledKey = "backend.sync-enabled";
     private const string CameraAiAccessScanEnabledKey = "camera.ai-access.scan-enabled";
@@ -30,11 +30,11 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
     private const string DefaultCameraLcdUnavailableText = "Camera Error";
     private const string DefaultCameraLcdUnknownDeniedText = "Access Denied";
     private const string DefaultCameraLcdUnrecognizedText = "Unrecognized";
-    private const string DefaultBackendBaseUrl = "http://127.0.0.1:5112";
+    private const string DefaultBackendBaseUrl = "http://127.0.0.1:5000";
     private const string EditParkingEnabledKey = "workspace.edit-parking-enabled";
     private const string KeepCameraEnabledOutsideGateKey = "camera.keep-enabled-outside-gate";
     private const string OpenAiUsageEnabledKey = "openai.usage-enabled";
-    private const string WindowsBackendBaseUrl = "http://127.0.0.1:5112";
+    private const string WindowsBackendBaseUrl = "http://127.0.0.1:5000";
     public event Action? PreferencesChanged;
 
     public bool EditParkingEnabled
