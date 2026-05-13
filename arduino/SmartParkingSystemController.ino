@@ -19,7 +19,7 @@
 // 2. Керує воротами через сервопривід.
 // 3. Читає стан паркомісць через ультразвукові датчики.
 // 4. Показує короткий стан на LCD 16x2.
-// 5. Спілкується із застосунком через Bluetooth-модуль HC-05.
+// 5. Спілкується із застосунком через Bluetooth-модуль HC-05 і паралельно через USB-CDC.
 // 6. Зберігає редаговані параметри в EEPROM, щоб вони не губилися після перезапуску.
 //
 // Важлива ідея:
@@ -38,13 +38,113 @@
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-// Bluetooth
+// Канал зв'язку із застосунком (Bluetooth + USB одночасно)
 // -----------------------------------------------------------------------------
-// Використовуємо апаратний Serial1 для HC-05 на Arduino Mega.
-// HC-05 TXD -> Mega D19 RX1
-// HC-05 RXD -> Mega D18 TX1
-// Для HC-05 RXD бажано використовувати дільник напруги.
-#define btSerial Serial1
+// Контролер слухає одразу два транспорти:
+//   - HC-05 на апаратному Serial1 (Bluetooth, як і раніше).
+//   - USB-CDC на Serial (коли Mega підключена кабелем у комп'ютер).
+//
+// LinkStream фанаутить виклики:
+//   - available() / read() / peek() — забирає байти з того порту, де вони є,
+//     тримається одного порту до '\n', щоб не змішати команди двох клієнтів.
+//   - write() — пише в обидва порти, щоб клієнт, який зробив запит, гарантовано
+//     отримав відповідь незалежно від того, по якому каналу він підключений.
+//
+// Розподіл пінів HC-05 на Mega:
+//   HC-05 TXD -> Mega D19 RX1
+//   HC-05 RXD -> Mega D18 TX1   (дільник напруги бажаний).
+//
+// Якщо USB-CDC не використовується — нічого міняти не треба, Serial просто
+// сидить у бекграунді і не заважає протоколу.
+class LinkStream : public Stream
+{
+public:
+    LinkStream(Stream &primary, Stream &secondary)
+        : _primary(primary), _secondary(secondary), _stickySource(nullptr)
+    {
+    }
+
+    int available() override
+    {
+        return _primary.available() + _secondary.available();
+    }
+
+    int read() override
+    {
+        Stream *source = pickReadSource();
+        if (source == nullptr)
+        {
+            return -1;
+        }
+
+        int value = source->read();
+        if (value == '\n' || value == -1)
+        {
+            // Кінець рядка або вичерпано — наступний read() може взяти інший канал.
+            _stickySource = nullptr;
+        }
+        return value;
+    }
+
+    int peek() override
+    {
+        Stream *source = pickReadSource();
+        return source == nullptr ? -1 : source->peek();
+    }
+
+    void flush() override
+    {
+        _primary.flush();
+        _secondary.flush();
+    }
+
+    size_t write(uint8_t value) override
+    {
+        size_t a = _primary.write(value);
+        size_t b = _secondary.write(value);
+        return a > b ? a : b;
+    }
+
+    size_t write(const uint8_t *buffer, size_t size) override
+    {
+        size_t a = _primary.write(buffer, size);
+        size_t b = _secondary.write(buffer, size);
+        return a > b ? a : b;
+    }
+
+private:
+    Stream *pickReadSource()
+    {
+        if (_stickySource != nullptr && _stickySource->available() > 0)
+        {
+            return _stickySource;
+        }
+
+        if (_primary.available() > 0)
+        {
+            _stickySource = &_primary;
+            return _stickySource;
+        }
+
+        if (_secondary.available() > 0)
+        {
+            _stickySource = &_secondary;
+            return _stickySource;
+        }
+
+        _stickySource = nullptr;
+        return nullptr;
+    }
+
+    Stream &_primary;
+    Stream &_secondary;
+    Stream *_stickySource;
+};
+
+// USB-CDC має пріоритет, бо в дев-сценарії застосунок частіше підключається
+// саме кабелем; на роботу через HC-05 це жодного впливу не має.
+LinkStream linkSerial(Serial, Serial1);
+#define btSerial linkSerial
 
 // -----------------------------------------------------------------------------
 // RFID
@@ -297,11 +397,13 @@ void setSlotEnabled(uint8_t slotIndex, bool isEnabled);
 // Виконується один раз при старті контролера.
 void setup()
 {
-    // Локальний Serial зручний для дебагу через Arduino IDE.
-    Serial.begin(9600);
+    // Serial — це і дебаг через Arduino IDE, і повноцінний канал для застосунку
+    // через USB-CDC (коли Mega підключена кабелем). LinkStream фанаутить його
+    // разом із HC-05.
+    Serial.begin(BT_BAUD_RATE);
 
-    // Bluetooth-канал для зв'язку із застосунком.
-    btSerial.begin(BT_BAUD_RATE);
+    // Bluetooth-канал HC-05 на апаратному Serial1.
+    Serial1.begin(BT_BAUD_RATE);
 
     // Ініціалізація SPI та RFID.
     SPI.begin();
@@ -937,7 +1039,7 @@ void sendError(const char *scope, const char *message)
 void sendHello()
 {
     beginProtocolFrame();
-    btSerial.print(F("HELLO_OK|device=SMART_PARKING|fw=2|slots=6|transport=HC05"));
+    btSerial.print(F("HELLO_OK|device=SMART_PARKING|fw=2|slots=6|transport=HC05+USB"));
     endProtocolFrame();
 }
 
@@ -948,7 +1050,7 @@ void sendHello()
 void sendProfile()
 {
     beginProtocolFrame();
-    btSerial.print(F("PROFILE|board=ArduinoMega|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05|slots=6|route_led_strips=3|front_sensor=1"));
+    btSerial.print(F("PROFILE|board=ArduinoMega|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05+USB|slots=6|route_led_strips=3|front_sensor=1"));
     endProtocolFrame();
 }
 
@@ -1179,8 +1281,9 @@ bool unwrapProtocolFrame(char *line)
 // -----------------------------------------------------------------------------
 // handleBluetoothInput
 // -----------------------------------------------------------------------------
-// Приймає символи з Bluetooth і збирає з них рядкові команди.
-// Команда вважається завершеною по '\n'.
+// Приймає символи з активного каналу зв'язку (HC-05 або USB-CDC) і збирає з них
+// рядкові команди. Команда вважається завершеною по '\n'.
+// Назву функції збережено історично — фактично вона працює з LinkStream.
 void handleBluetoothInput()
 {
     while (btSerial.available() > 0)

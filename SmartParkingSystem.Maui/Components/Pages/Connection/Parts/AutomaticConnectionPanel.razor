@@ -1,14 +1,19 @@
 @namespace SmartParkingSystem.Maui.Components.Pages.Connection.Parts
 @inherits AutomaticConnectionPanelBase
 
-<div class="@ContentClass">
-    <div class="grid min-h-[12.5rem] gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-center">
-        <button class="@PrimaryButtonClass" @onclick="OnConnect" disabled="@IsBusy">
-            @ButtonText
-        </button>
+<div class="@ContentClass flex flex-1 flex-col">
+    <div class="flex h-full flex-col justify-center gap-4">
+        <div class="grid gap-3 sm:grid-cols-2">
+            <button class="@PrimaryButtonClass" @onclick="OnConnectBluetooth" disabled="@IsBusy">
+                @BluetoothButtonText
+            </button>
+            <button class="@PrimaryButtonClass" @onclick="OnConnectUsb" disabled="@IsBusy">
+                @UsbButtonText
+            </button>
+        </div>
 
-        <p class="text-sm leading-6 text-calm-700">
+        <div class="rounded-md bg-white/85 px-4 py-4 text-sm leading-6 text-calm-700">
             @Description
-        </p>
+        </div>
     </div>
 </div>

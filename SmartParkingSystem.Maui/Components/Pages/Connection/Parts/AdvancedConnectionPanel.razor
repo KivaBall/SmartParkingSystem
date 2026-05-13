@@ -1,9 +1,9 @@
 @namespace SmartParkingSystem.Maui.Components.Pages.Connection.Parts
 @inherits AdvancedConnectionPanelBase
 
-<div class="@ContentClass">
-    <div class="flex min-h-[12.5rem] flex-col justify-between gap-4">
-        <div class="grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+<div class="@ContentClass flex flex-1 flex-col">
+    <div class="flex h-full flex-col justify-between gap-4">
+        <div class="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
             <div>
                 <label class="mb-2 text-sm font-semibold text-calm-700" for="device-select">@DeviceLabel</label>
                 <select id="device-select"
@@ -21,9 +21,14 @@
             <button class="@WarningButtonClass" @onclick="OnRefresh" disabled="@IsBusy">
                 @RefreshButtonText
             </button>
+        </div>
 
-            <button class="@SecondaryButtonClass" @onclick="OnConnect" disabled="@IsBusy">
-                @ConnectButtonText
+        <div class="grid gap-3 sm:grid-cols-2">
+            <button class="@SecondaryButtonClass" @onclick="OnConnectBluetooth" disabled="@IsBusy">
+                @BluetoothConnectButtonText
+            </button>
+            <button class="@SecondaryButtonClass" @onclick="OnConnectUsb" disabled="@IsBusy">
+                @UsbConnectButtonText
             </button>
         </div>
 

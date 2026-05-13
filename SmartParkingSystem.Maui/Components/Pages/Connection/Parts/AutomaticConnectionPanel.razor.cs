@@ -11,7 +11,10 @@ public class AutomaticConnectionPanelBase : ComponentBase
     public string PrimaryButtonClass { get; set; } = string.Empty;
 
     [Parameter]
-    public string ButtonText { get; set; } = string.Empty;
+    public string BluetoothButtonText { get; set; } = string.Empty;
+
+    [Parameter]
+    public string UsbButtonText { get; set; } = string.Empty;
 
     [Parameter]
     public string Description { get; set; } = string.Empty;
@@ -20,5 +23,8 @@ public class AutomaticConnectionPanelBase : ComponentBase
     public bool IsBusy { get; set; }
 
     [Parameter]
-    public EventCallback OnConnect { get; set; }
+    public EventCallback OnConnectBluetooth { get; set; }
+
+    [Parameter]
+    public EventCallback OnConnectUsb { get; set; }
 }
