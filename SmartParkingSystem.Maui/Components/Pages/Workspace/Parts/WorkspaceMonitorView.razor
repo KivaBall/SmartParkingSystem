@@ -46,11 +46,18 @@ else
                 <p class="text-base font-semibold text-calm-900">@Texts.CurrentTextTitle</p>
             </div>
 
-            <div class="flex min-h-[12.5rem] items-center justify-center rounded-md bg-calm-50 px-4 py-4 text-center">
-                <p class="text-5xl font-extrabold leading-none text-brand-400"
-                   style="font-family: 'Orbitron', 'Manrope', sans-serif;">
-                    @DisplayText
-                </p>
+            <div class="flex min-h-[12.5rem] items-center justify-center rounded-md bg-calm-50 px-4 py-4">
+                <div class="grid w-full max-w-[42rem] gap-2">
+                    <p class="min-h-14 w-full overflow-hidden px-4 py-3 text-left text-4xl font-extrabold leading-none text-brand-400 md:text-5xl"
+                       style="font-family: 'Orbitron', 'Manrope', sans-serif;">
+                        @DisplayText
+                    </p>
+
+                    <p class="min-h-14 w-full overflow-hidden px-4 py-3 text-left text-4xl font-extrabold leading-none text-brand-400 md:text-5xl"
+                       style="font-family: 'Orbitron', 'Manrope', sans-serif;">
+                        @DisplayDetailText
+                    </p>
+                </div>
             </div>
         </article>
 
@@ -107,15 +114,15 @@ else
                                maxlength="16"
                                @bind="EditableSettings.ForcedText"/>
                     </div>
-                </div>
-
-                <div class="grid gap-3 workspace-monitor-texts">
                     <div class="rounded-md bg-white px-4 py-4">
                         <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.DefaultTextLabel</p>
                         <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
                                maxlength="16"
                                @bind="EditableSettings.DefaultText"/>
                     </div>
+                </div>
+
+                <div class="grid gap-3 workspace-monitor-texts">
                     <div class="rounded-md bg-white px-4 py-4">
                         <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.AllowedTextLabel</p>
                         <input class="min-h-12 w-full rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"

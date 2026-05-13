@@ -28,6 +28,7 @@ public class WorkspaceMonitorViewBase : ComponentBase, IDisposable
 
     protected MonitorSnapshot Snapshot { get; set; } = new MonitorSnapshot(
         string.Empty,
+        string.Empty,
         false,
         new MonitorEditableSettings());
 
@@ -75,6 +76,8 @@ public class WorkspaceMonitorViewBase : ComponentBase, IDisposable
             : !string.IsNullOrWhiteSpace(Snapshot.EditableSettings.DefaultText)
                 ? Snapshot.EditableSettings.DefaultText
                 : "N/A";
+
+    protected string DisplayDetailText => Snapshot.CurrentDetailText;
 
     protected string DisplayClass => IsExiting
         ? "animate-exit-left rounded-md bg-brand-100/80 p-6"

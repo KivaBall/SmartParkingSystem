@@ -92,7 +92,7 @@ constexpr long BT_BAUD_RATE = 9600;
 constexpr uint16_t CONFIG_SIGNATURE = 0x5350;
 constexpr uint8_t CONFIG_VERSION = 6;
 constexpr unsigned long LCD_MESSAGE_DURATION_MS = 3000UL;
-constexpr size_t RX_BUFFER_SIZE = 40;
+constexpr size_t RX_BUFFER_SIZE = 80;
 constexpr uint8_t DEFAULT_SLOT_ENABLED_MASK = 0x07;
 constexpr char PROTOCOL_FRAME_MARKER[] = "|||";
 constexpr uint8_t PROTOCOL_FRAME_MARKER_LENGTH = 3;
@@ -268,6 +268,7 @@ void setupRouteLedStrips();
 void clearRouteLedStrips();
 void showRouteToSlot(uint8_t slotIndex);
 void updateLcd();
+void setAvailabilityDisplayLine2();
 void showMessage(const char *line1, const char *line2);
 void updateDisplayState();
 void setDisplayText(char target[DISPLAY_TEXT_LENGTH + 1], const char *value);
@@ -426,12 +427,12 @@ void setDefaultConfig()
 
     config.slotEnabledMask = DEFAULT_SLOT_ENABLED_MASK;
     config.displayForceEnabled = 0;
-    setDisplayText(config.displayForcedText, "FORCED TEXT");
-    setDisplayText(config.displayDefaultText, "SMART PARKING");
-    setDisplayText(config.displayAllowedText, "ACCESS GRANTED");
-    setDisplayText(config.displayBlockedText, "BLOCKED CARD");
-    setDisplayText(config.displayInvalidText, "INVALID CARD");
-    setDisplayText(config.displayLockedText, "ACCESS LOCKED");
+    setDisplayText(config.displayForcedText, "Forced Text");
+    setDisplayText(config.displayDefaultText, "Smart Parking");
+    setDisplayText(config.displayAllowedText, "Access Granted");
+    setDisplayText(config.displayBlockedText, "Blocked Card");
+    setDisplayText(config.displayInvalidText, "Invalid Card");
+    setDisplayText(config.displayLockedText, "Access Locked");
 
     // Дефолтний список дозволених карток.
     config.allowedCount = 3;
@@ -510,6 +511,12 @@ void updateDisplayState()
     }
 
     currentDisplayForced = false;
+
+    if (millis() <= messageVisibleUntil && lcdLine1[0] != '\0')
+    {
+        setDisplayText(currentDisplayText, lcdLine1);
+        return;
+    }
 
     if (transientDisplayUntil > millis() && transientDisplayText[0] != '\0')
     {
@@ -855,30 +862,26 @@ void updateLcd()
     if (config.displayForceEnabled)
     {
         setDisplayText(lcdLine1, config.displayForcedText);
-        lcdLine2[0] = '\0';
+        setAvailabilityDisplayLine2();
     }
-    else if (DEMO_MODE)
+    else if (millis() <= messageVisibleUntil)
+    {
+        // Keep the explicit two-line message set by showMessage().
+    }
+    else if (transientDisplayUntil > millis() && transientDisplayText[0] != '\0')
+    {
+        setDisplayText(lcdLine1, transientDisplayText);
+        setAvailabilityDisplayLine2();
+    }
+    else
+    {
+        setDisplayText(lcdLine1, config.displayDefaultText);
+        setAvailabilityDisplayLine2();
+    }
+
+    if (DEMO_MODE)
     {
         return;
-    }
-    else if (millis() > messageVisibleUntil)
-    {
-        uint8_t freeCount = 0;
-        uint8_t enabledCount = 0;
-        for (uint8_t i = 0; i < SLOT_COUNT; i++)
-        {
-            if (isSlotEnabled(i))
-            {
-                enabledCount++;
-                if (!slotOccupied[i])
-                {
-                    freeCount++;
-                }
-            }
-        }
-
-        snprintf(lcdLine1, sizeof(lcdLine1), "Scan Card");
-        snprintf(lcdLine2, sizeof(lcdLine2), "Free:%u/%u", freeCount, enabledCount);
     }
 
     lcd.setCursor(0, 0);
@@ -892,17 +895,31 @@ void updateLcd()
     lcd.print(lcdLine2);
 }
 
+void setAvailabilityDisplayLine2()
+{
+    uint8_t freeCount = 0;
+    uint8_t enabledCount = 0;
+    for (uint8_t i = 0; i < SLOT_COUNT; i++)
+    {
+        if (isSlotEnabled(i))
+        {
+            enabledCount++;
+            if (!slotOccupied[i])
+            {
+                freeCount++;
+            }
+        }
+    }
+
+    snprintf(lcdLine2, sizeof(lcdLine2), "Free: %u / %u", freeCount, enabledCount);
+}
+
 // -----------------------------------------------------------------------------
 // showMessage
 // -----------------------------------------------------------------------------
 // Встановлює тимчасовий текст на LCD.
 void showMessage(const char *line1, const char *line2)
 {
-    if (DEMO_MODE)
-    {
-        return;
-    }
-
     strncpy(lcdLine1, line1, sizeof(lcdLine1) - 1);
     strncpy(lcdLine2, line2, sizeof(lcdLine2) - 1);
     lcdLine1[sizeof(lcdLine1) - 1] = '\0';
@@ -1099,6 +1116,8 @@ void sendTelemetry()
     beginProtocolFrame();
     btSerial.print(F("DISPLAY|text="));
     btSerial.print(currentDisplayText);
+    btSerial.print(F("|line2="));
+    btSerial.print(lcdLine2);
     btSerial.print(F("|forced="));
     btSerial.print(currentDisplayForced ? 1 : 0);
     endProtocolFrame();
@@ -2015,30 +2034,30 @@ void handleRfid()
             }
 
             updateGateMode();
-            showMessage("Access Granted", "Gate Open");
             setTransientDisplayText(config.displayAllowedText);
+            showMessage(config.displayAllowedText, "Gate Open");
             btSerial.print(F("ALLOWED|uid="));
             setLastAccessEvent(uid, "ALLOWED");
         }
         else
         {
-            showMessage("Access Locked", "Gate Blocked");
             setTransientDisplayText(config.displayLockedText);
+            showMessage(config.displayLockedText, "Gate Blocked");
             btSerial.print(F("LOCKED|uid="));
             setLastAccessEvent(uid, "LOCKED");
         }
     }
     else if (compareUid(uid, config.blockedCards, config.blockedCount))
     {
-        showMessage("Blocked Card", "Access Denied");
         setTransientDisplayText(config.displayBlockedText);
+        showMessage(config.displayBlockedText, "Access Denied");
         btSerial.print(F("BLOCKED|uid="));
         setLastAccessEvent(uid, "BLOCKED");
     }
     else
     {
-        showMessage("Invalid Card", "Access Denied");
         setTransientDisplayText(config.displayInvalidText);
+        showMessage(config.displayInvalidText, "Access Denied");
         btSerial.print(F("INVALID|uid="));
         setLastAccessEvent(uid, "INVALID");
     }

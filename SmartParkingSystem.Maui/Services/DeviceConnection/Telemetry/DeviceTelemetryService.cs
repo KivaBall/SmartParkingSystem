@@ -138,7 +138,7 @@ public sealed class DeviceTelemetryService(
                 await transportService.SendLineAsync("GET SNAPSHOT", token);
 
                 string? snapshotLine = null;
-                (string Text, bool Forced)? displayState = null;
+                (string Text, string Line2, bool Forced)? displayState = null;
                 var slots = new Dictionary<int, DeviceSlotSnapshot>();
                 (int Allowed, int Blocked)? counts = null;
 
@@ -157,9 +157,13 @@ public sealed class DeviceTelemetryService(
                         continue;
                     }
 
-                    if (DeviceProtocolParser.TryParseDisplayState(line, out var displayText, out var displayForced))
+                    if (DeviceProtocolParser.TryParseDisplayState(
+                            line,
+                            out var displayText,
+                            out var displayLine2,
+                            out var displayForced))
                     {
-                        displayState = (displayText, displayForced);
+                        displayState = (displayText, displayLine2, displayForced);
                         continue;
                     }
 
@@ -180,6 +184,7 @@ public sealed class DeviceTelemetryService(
                         slotCount,
                         displayState is not null,
                         displayState?.Text ?? string.Empty,
+                        displayState?.Line2 ?? string.Empty,
                         displayState?.Forced ?? false,
                         slots,
                         counts is not null,

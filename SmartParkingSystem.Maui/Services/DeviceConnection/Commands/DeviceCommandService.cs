@@ -8,6 +8,8 @@ public sealed class DeviceCommandService(
     IDeviceTransportService transportService,
     IDeviceProtocolExecutionService protocolExecutionService) : IDeviceCommandService
 {
+    private static readonly TimeSpan CommandDrainWindow = TimeSpan.FromMilliseconds(120);
+
     public Task<DeviceCommandResult> SetForceOpenAsync(bool isEnabled, CancellationToken cancellationToken = default)
     {
         return SendCommandAsync(
@@ -362,6 +364,7 @@ public sealed class DeviceCommandService(
                         DeviceCommandFailureKind.TransportClosed);
                 }
 
+                await transportService.DrainAsync(CommandDrainWindow, token);
                 await transportService.SendLineAsync(command, token);
 
                 var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(2);
@@ -382,6 +385,14 @@ public sealed class DeviceCommandService(
                         && expectedErrorPrefixes.Any(prefix => line.StartsWith(
                             prefix,
                             StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return DeviceCommandResult.Failure(
+                            expectedScope,
+                            DeviceCommandFailureKind.DeviceRejected,
+                            line);
+                    }
+
+                    if (line.StartsWith("ERR|RX|", StringComparison.OrdinalIgnoreCase))
                     {
                         return DeviceCommandResult.Failure(
                             expectedScope,
