@@ -25,11 +25,11 @@ public sealed class SettingsPreferencesService : ISettingsPreferencesService
     private const string CameraLcdUnavailableTextKey = "camera.lcd.unavailable-text";
     private const string CameraLcdUnknownDeniedTextKey = "camera.lcd.unknown-denied-text";
     private const string CameraLcdUnrecognizedTextKey = "camera.lcd.unrecognized-text";
-    private const string DefaultCameraLcdAiUnavailableText = "AI UNAVAIL";
-    private const string DefaultCameraLcdAllowedText = "CAMERA ACCESS";
-    private const string DefaultCameraLcdUnavailableText = "CAMERA ERROR";
-    private const string DefaultCameraLcdUnknownDeniedText = "UNKNOWN DENY";
-    private const string DefaultCameraLcdUnrecognizedText = "UNRECOGNIZED";
+    private const string DefaultCameraLcdAiUnavailableText = "AI Error";
+    private const string DefaultCameraLcdAllowedText = "Camera Access";
+    private const string DefaultCameraLcdUnavailableText = "Camera Error";
+    private const string DefaultCameraLcdUnknownDeniedText = "Access Denied";
+    private const string DefaultCameraLcdUnrecognizedText = "Unrecognized";
     private const string DefaultBackendBaseUrl = "http://127.0.0.1:5112";
     private const string EditParkingEnabledKey = "workspace.edit-parking-enabled";
     private const string KeepCameraEnabledOutsideGateKey = "camera.keep-enabled-outside-gate";

@@ -11,12 +11,12 @@ public sealed class MonitorService(
 {
     private static readonly MonitorEditableSettings DefaultSettings = new MonitorEditableSettings(
         false,
-        "FORCED TEXT",
-        "SMART PARKING",
-        "ACCESS GRANTED",
-        "BLOCKED CARD",
-        "INVALID CARD",
-        "ACCESS LOCKED");
+        "Forced Text",
+        "Smart Parking",
+        "Access Granted",
+        "Blocked Card",
+        "Invalid Card",
+        "Access Locked");
 
     public Task<MonitorSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
@@ -99,6 +99,7 @@ public sealed class MonitorService(
         {
             return new MonitorSnapshot(
                 string.Empty,
+                string.Empty,
                 false,
                 new MonitorEditableSettings());
         }
@@ -106,6 +107,7 @@ public sealed class MonitorService(
         var configuration = session.Configuration;
         return new MonitorSnapshot(
             session.Snapshot.DisplayText,
+            session.Snapshot.DisplayLine2,
             session.Snapshot.DisplayForced,
             new MonitorEditableSettings(
                 configuration.DisplayForceEnabled,

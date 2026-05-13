@@ -16,6 +16,7 @@ public sealed record DeviceControllerSnapshot(
     int FrontAccessDistanceCm,
     int FrontAccessCounter,
     string DisplayText,
+    string DisplayLine2,
     bool DisplayForced,
     IReadOnlyList<DeviceSlotSnapshot> Slots,
     int AllowedCount,

@@ -110,6 +110,7 @@ internal static class DeviceProtocolParser
     private static DeviceControllerSnapshot? ParseSnapshot(
         string snapshotLine,
         string displayText,
+        string displayLine2,
         bool displayForced,
         IReadOnlyList<DeviceSlotSnapshot> slots,
         int allowedCount,
@@ -145,6 +146,7 @@ internal static class DeviceProtocolParser
                 TryGetOptionalInt(values, "front_distance_cm"),
                 TryGetOptionalInt(values, "front_counter"),
                 displayText,
+                displayLine2,
                 displayForced,
                 slots,
                 allowedCount,
@@ -159,6 +161,7 @@ internal static class DeviceProtocolParser
         int slotCount,
         bool hasDisplayState,
         string displayText,
+        string displayLine2,
         bool displayForced,
         IReadOnlyDictionary<int, DeviceSlotSnapshot> slots,
         bool hasCounts,
@@ -178,6 +181,7 @@ internal static class DeviceProtocolParser
         return ParseSnapshot(
             snapshotLine,
             displayText,
+            displayLine2,
             displayForced,
             orderedSlots,
             allowedCount,
@@ -298,9 +302,11 @@ internal static class DeviceProtocolParser
     public static bool TryParseDisplayState(
         string line,
         out string text,
+        out string line2,
         out bool forced)
     {
         text = string.Empty;
+        line2 = string.Empty;
         forced = false;
 
         if (!line.StartsWith("DISPLAY|", StringComparison.OrdinalIgnoreCase))
@@ -309,6 +315,7 @@ internal static class DeviceProtocolParser
         }
 
         var values = ParseKeyValueSegments(line);
+        line2 = GetString(values, "line2");
         return TryGetRequiredString(values, "text", out text)
                && TryGetRequiredBool(values, "forced", out forced);
     }
