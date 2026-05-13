@@ -5,4 +5,5 @@ public sealed record VehicleAiRecognitionResult(
     VehicleAiRecognitionKind Kind,
     string? MatchedCardUid,
     string VehicleDescription,
-    string Reason);
+    string Reason,
+    string VehicleNumber = "");

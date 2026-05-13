@@ -22,6 +22,8 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
     private const double MaxLeftPercent = 98;
     private const double MinTopPercent = 2;
     private const double MaxTopPercent = 92;
+    private const int FloorModeClickWindowMs = 1000;
+    private const int FloorModeClickThreshold = 3;
 
     private static readonly IReadOnlyDictionary<int, ParkingLayoutItem> DefaultLayoutItems =
         new Dictionary<int, ParkingLayoutItem>
@@ -62,30 +64,34 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
     private bool NeedsIconRefresh { get; set; } = true;
     private string? LastParkingStateFingerprint { get; set; }
     private bool IsReloading { get; set; }
+    private bool FloorModeEnabled { get; set; }
+    private int FloorModeTitleClicks { get; set; }
+    private DateTimeOffset FirstFloorModeTitleClickAt { get; set; }
 
     protected ParkingTexts Texts => RequireLocalizationService().GetParkingTexts();
     protected bool EditParkingEnabled => RequireSettingsPreferencesService().EditParkingEnabled;
 
     protected IReadOnlyList<ParkingSlotSnapshot> VisibleSlots =>
     [
-        .. Slots.Where(slot => slot.Floor == ActiveFloor &&
+        .. Slots.Where(slot => (!FloorModeEnabled || slot.Floor == ActiveFloor) &&
                                (EditParkingEnabled || slot.State != ParkingSlotState.Disabled))
     ];
 
     protected ParkingSlotSnapshot? SelectedSlot => Slots.FirstOrDefault(slot => slot.Id == SelectedSlotId);
     protected ParkingPositionDraft? SelectedDraft => DraftPositions.GetValueOrDefault(SelectedSlotId);
-    protected bool CanMoveToPreviousFloor => ActiveFloor > MinFloor;
-    protected bool CanMoveToNextFloor => ActiveFloor < MaxFloor;
-    protected bool CanRaiseSelectedSlot => !IsBusy && SelectedSlot is { Floor: < MaxFloor };
-    protected bool CanLowerSelectedSlot => !IsBusy && SelectedSlot is { Floor: > MinFloor };
+    protected bool CanMoveToPreviousFloor => FloorModeEnabled && ActiveFloor > MinFloor;
+    protected bool CanMoveToNextFloor => FloorModeEnabled && ActiveFloor < MaxFloor;
+    protected bool CanRaiseSelectedSlot => FloorModeEnabled && !IsBusy && SelectedSlot is { Floor: < MaxFloor };
+    protected bool CanLowerSelectedSlot => FloorModeEnabled && !IsBusy && SelectedSlot is { Floor: > MinFloor };
 
     protected bool CanShowRouteToSelectedSlot =>
         !IsBusy && SelectedSlot is not null && TryParseSlotNumber(SelectedSlot.Id, out var slotNumber) &&
         slotNumber <= 3;
 
     protected string FloorLayerStyle => IsFloorContentVisible ? "opacity: 1;" : "opacity: 0;";
+    protected string FloorControlsStyle => FloorModeEnabled ? string.Empty : "display: none;";
 
-    protected string ParkingMapImagePath => ActiveFloor == MinFloor
+    protected string ParkingMapImagePath => !FloorModeEnabled || ActiveFloor == MinFloor
         ? "assets/parking-shape-first.svg"
         : "assets/parking-shape-second.svg";
 
@@ -175,6 +181,32 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
     {
         SelectedSlotId = slotId;
         NeedsIconRefresh = true;
+    }
+
+    protected Task HandleParkingTitleClick()
+    {
+        var now = DateTimeOffset.UtcNow;
+        if ((now - FirstFloorModeTitleClickAt).TotalMilliseconds > FloorModeClickWindowMs)
+        {
+            FirstFloorModeTitleClickAt = now;
+            FloorModeTitleClicks = 0;
+        }
+
+        FloorModeTitleClicks++;
+        if (FloorModeTitleClicks < FloorModeClickThreshold)
+        {
+            return Task.CompletedTask;
+        }
+
+        FloorModeTitleClicks = 0;
+        FloorModeEnabled = !FloorModeEnabled;
+        if (!FloorModeEnabled)
+        {
+            ActiveFloor = MinFloor;
+        }
+
+        NeedsIconRefresh = true;
+        return InvokeAsync(StateHasChanged);
     }
 
     protected Task ShowPreviousFloor()

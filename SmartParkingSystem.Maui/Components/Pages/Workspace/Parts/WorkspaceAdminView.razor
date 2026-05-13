@@ -348,52 +348,44 @@
                         </div>
                     </div>
 
-                    <div class="grid gap-3 lg:grid-cols-[1fr_1fr]">
-                        <div class="rounded-md bg-white px-4 py-4">
-                            <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.AllowedCardsLabel</p>
-                            <textarea class="min-h-16 h-full w-full resize-none rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
-                                      @bind="EditableSettings.AllowedCardsText"></textarea>
-                        </div>
-
-                        <div class="rounded-md bg-white px-4 py-4">
-                            <p class="mb-2 text-sm font-semibold text-calm-500">@Texts.BlockedCardsLabel</p>
-                            <textarea class="min-h-16 h-full w-full resize-none rounded-md bg-calm-50 px-4 py-3 text-base font-semibold text-calm-900 outline-none"
-                                      @bind="EditableSettings.BlockedCardsText"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="mt-3 grid gap-3">
-                        @foreach (var row in AllowedCardRows)
+                    <div class="grid gap-3">
+                        @foreach (var row in CardRows)
                         {
-                            <div class="grid gap-3 rounded-md bg-white px-4 py-4 md:grid-cols-[10rem_1fr_auto] md:items-center">
-                                <p class="text-sm font-semibold text-calm-900">@row.CardUid</p>
+                            <div class="grid gap-3 rounded-md bg-white px-4 py-4 lg:grid-cols-[11rem_9rem_1fr_auto_auto] lg:items-center">
+                                <input class="min-h-10 w-full rounded-md bg-calm-50 px-4 py-3 text-sm font-semibold text-calm-900 outline-none"
+                                       maxlength="11"
+                                       value="@row.CardUid"
+                                       @onchange="eventArgs => OnCardUidChanged(row.RowId, eventArgs)"/>
+
+                                <input class="min-h-10 w-full rounded-md bg-calm-50 px-4 py-3 text-sm font-semibold text-calm-900 outline-none"
+                                       maxlength="24"
+                                       value="@row.VehicleNumber"
+                                       @onchange="eventArgs => OnCardNumberChanged(row.RowId, eventArgs)"/>
+
                                 <input class="min-h-10 w-full rounded-md bg-calm-50 px-4 py-3 text-sm font-semibold text-calm-900 outline-none"
                                        value="@row.VehicleDescription"
-                                       @onchange="eventArgs => OnVehicleDescriptionChanged(row.CardUid, eventArgs)"/>
+                                       @onchange="eventArgs => OnCardDescriptionChanged(row.RowId, eventArgs)"/>
+
+                                <button class="@GetCardTypeToggleClass(row.IsBlocked)"
+                                        type="button"
+                                        @onclick="() => ToggleCardType(row.RowId)">
+                                    <span>@GetCardTypeLabel(row.IsBlocked)</span>
+                                </button>
+
                                 <button class="inline-flex min-h-10 items-center justify-center rounded-md bg-calm-50 px-3 py-2 text-sm font-semibold text-calm-700 transition-all duration-500 ease-out hover:bg-warm-200 disabled:cursor-default disabled:opacity-50"
                                         type="button"
-                                        disabled="@string.IsNullOrWhiteSpace(row.VehicleDescription)"
-                                        @onclick="() => ClearVehicleDescription(row.CardUid)">
-                                    <i data-lucide="x"></i>
+                                        @onclick="() => RemoveCardRow(row.RowId)">
+                                    <i data-lucide="trash-2"></i>
                                 </button>
                             </div>
                         }
 
-                        @foreach (var row in BlockedCardRows)
-                        {
-                            <div class="grid gap-3 rounded-md bg-white px-4 py-4 md:grid-cols-[10rem_1fr_auto] md:items-center">
-                                <p class="text-sm font-semibold text-warm-700">@row.CardUid</p>
-                                <input class="min-h-10 w-full rounded-md bg-calm-50 px-4 py-3 text-sm font-semibold text-calm-900 outline-none"
-                                       value="@row.VehicleDescription"
-                                       @onchange="eventArgs => OnVehicleDescriptionChanged(row.CardUid, eventArgs)"/>
-                                <button class="inline-flex min-h-10 items-center justify-center rounded-md bg-calm-50 px-3 py-2 text-sm font-semibold text-calm-700 transition-all duration-500 ease-out hover:bg-warm-200 disabled:cursor-default disabled:opacity-50"
-                                        type="button"
-                                        disabled="@string.IsNullOrWhiteSpace(row.VehicleDescription)"
-                                        @onclick="() => ClearVehicleDescription(row.CardUid)">
-                                    <i data-lucide="x"></i>
-                                </button>
-                            </div>
-                        }
+                        <button class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-300 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-brand-400 disabled:cursor-default disabled:opacity-50"
+                                type="button"
+                                disabled="@IsBusy"
+                                @onclick="AddCardRow">
+                            <i data-lucide="plus"></i>
+                        </button>
                     </div>
                 </section>
             </div>

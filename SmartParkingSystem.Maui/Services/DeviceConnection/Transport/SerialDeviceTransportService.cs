@@ -5,7 +5,7 @@ namespace SmartParkingSystem.Maui.Services.DeviceConnection.Transport;
 public sealed class SerialDeviceTransportService : IDeviceTransportService
 {
 #if WINDOWS
-    private static readonly TimeSpan OpenWarmupDelay = TimeSpan.FromMilliseconds(1500);
+    private static readonly TimeSpan OpenWarmupDelay = TimeSpan.FromMilliseconds(2200);
     private System.IO.Ports.SerialPort? serialPort;
 #endif
     public bool IsOpen
@@ -44,7 +44,7 @@ public sealed class SerialDeviceTransportService : IDeviceTransportService
         var candidate = new System.IO.Ports.SerialPort(targetId, 9600)
         {
             NewLine = "\n",
-            ReadTimeout = 500,
+            ReadTimeout = 800,
             WriteTimeout = 2000,
             DtrEnable = false,
             RtsEnable = false

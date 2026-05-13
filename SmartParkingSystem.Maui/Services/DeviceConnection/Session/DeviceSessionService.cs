@@ -9,12 +9,12 @@ public sealed class DeviceSessionService(
     IDeviceTransportService transportService,
     IDeviceTelemetryService telemetryService) : IDeviceSessionService
 {
-    private const int HelloAttempts = 3;
-    private const int HelloAttemptWindowMs = 1800;
+    private const int HelloAttempts = 4;
+    private const int HelloAttemptWindowMs = 2500;
     private const int AutoConnectionPasses = 3;
     private static readonly TimeSpan InitialDrainWindow = TimeSpan.FromMilliseconds(120);
-    private static readonly TimeSpan HelloReadTimeout = TimeSpan.FromMilliseconds(300);
-    private static readonly TimeSpan AutoRetryDelay = TimeSpan.FromMilliseconds(350);
+    private static readonly TimeSpan HelloReadTimeout = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan AutoRetryDelay = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan DefaultSnapshotRefreshInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan MinimumSnapshotRefreshInterval = TimeSpan.FromMilliseconds(250);
 

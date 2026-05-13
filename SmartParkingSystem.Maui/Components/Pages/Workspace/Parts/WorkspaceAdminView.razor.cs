@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using SmartParkingSystem.Domain.Models.Admin;
 using SmartParkingSystem.Domain.Models.DeviceConnection;
 using SmartParkingSystem.Domain.Models.Localization;
@@ -27,6 +28,9 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
 
     [Inject]
     protected IAppMemoryStore? AppMemoryStore { get; set; }
+
+    [Inject]
+    protected IJSRuntime? JsRuntime { get; set; }
 
     [Parameter]
     public bool IsExiting { get; set; }
@@ -65,14 +69,12 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
     protected bool IsLoading { get; private set; } = true;
     protected string StatusMessage { get; set; } = string.Empty;
     protected bool IsBusy { get; set; }
+    private bool NeedsIconRefresh { get; set; } = true;
+    private bool HasLocalCardEditorChanges { get; set; }
     protected AdminTexts Texts => RequireLocalizationService().GetAdminTexts();
     protected SettingsTexts SettingsTexts => RequireLocalizationService().GetSettingsTexts();
     protected bool HasChanges => IsDirty();
-    protected IReadOnlyList<AdminCardDescriptionRow> AllowedCardRows =>
-        BuildCardRows(EditableSettings.AllowedCardsText);
-
-    protected IReadOnlyList<AdminCardDescriptionRow> BlockedCardRows =>
-        BuildCardRows(EditableSettings.BlockedCardsText);
+    protected List<AdminCardEditorRow> CardRows { get; } = [];
 
     protected bool EditParkingEnabled
     {
@@ -176,11 +178,28 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
             : "inline-flex min-h-12 flex-col items-center justify-center gap-1 rounded-md bg-mint-300 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-mint-200";
     }
 
+    protected static string GetCardTypeToggleClass(bool isBlocked)
+    {
+        return isBlocked
+            ? "inline-flex min-h-10 items-center justify-center rounded-md bg-warm-300 px-4 py-3 text-sm font-semibold text-warm-700 transition-all duration-500 ease-out hover:bg-warm-200"
+            : "inline-flex min-h-10 items-center justify-center rounded-md bg-mint-300 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-mint-200";
+    }
+
     protected string GetToggleButtonLabel(bool isActive)
     {
         return isActive
             ? Texts.ToggleEnabledLabel
             : Texts.ToggleDisabledLabel;
+    }
+
+    protected string GetCardTypeLabel(bool isBlocked)
+    {
+        if (RequireLocalizationService().CurrentLanguage == AppLanguage.Ukrainian)
+        {
+            return isBlocked ? "Заблоковано" : "Дозволено";
+        }
+
+        return isBlocked ? "Blocked" : "Allowed";
     }
 
     protected string GetParkingSpotLabel(int slotNumber)
@@ -204,8 +223,18 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         RequireSettingsPreferencesService().PreferencesChanged += OnPreferencesChanged;
         Snapshot = await RequireAdminService().GetSnapshotAsync();
         EditableSettings = Snapshot.EditableSettings.Clone();
+        SyncCardRowsFromSettings();
         StatusMessage = Texts.RefreshSuccessMessage;
         IsLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender || NeedsIconRefresh)
+        {
+            NeedsIconRefresh = false;
+            await RequireJsRuntime().InvokeVoidAsync("initializeLucideIcons");
+        }
     }
 
     protected async Task RefreshAsync()
@@ -222,6 +251,7 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         {
             Snapshot = await RequireAdminService().GetSnapshotAsync();
             EditableSettings = Snapshot.EditableSettings.Clone();
+            SyncCardRowsFromSettings();
             StatusMessage = Texts.RefreshSuccessMessage;
         }
         catch (Exception exception)
@@ -248,6 +278,7 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         {
             Snapshot = await RequireAdminService().SaveAsync(EditableSettings);
             EditableSettings = Snapshot.EditableSettings.Clone();
+            SyncCardRowsFromSettings();
             StatusMessage = Texts.SaveSuccessMessage;
         }
         catch (Exception exception)
@@ -274,6 +305,7 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         {
             Snapshot = await RequireAdminService().ResetAsync();
             EditableSettings = Snapshot.EditableSettings.Clone();
+            SyncCardRowsFromSettings();
             StatusMessage = Texts.ResetSuccessMessage;
         }
         catch (Exception exception)
@@ -364,7 +396,86 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         SaveVehicleDescription(cardUid, eventArgs.Value?.ToString() ?? string.Empty);
     }
 
+    protected void AddCardRow()
+    {
+        CardRows.Add(new AdminCardEditorRow(Guid.NewGuid(), string.Empty, string.Empty, string.Empty, false));
+        HasLocalCardEditorChanges = true;
+        NeedsIconRefresh = true;
+    }
+
+    protected void RemoveCardRow(Guid rowId)
+    {
+        var row = CardRows.FirstOrDefault(item => item.RowId == rowId);
+        if (row is null)
+        {
+            return;
+        }
+
+        CardRows.Remove(row);
+        HasLocalCardEditorChanges = true;
+        RebuildCardsTextFromRows();
+        NeedsIconRefresh = true;
+    }
+
+    protected void ToggleCardType(Guid rowId)
+    {
+        var row = CardRows.FirstOrDefault(item => item.RowId == rowId);
+        if (row is null)
+        {
+            return;
+        }
+
+        row.IsBlocked = !row.IsBlocked;
+        HasLocalCardEditorChanges = true;
+        RebuildCardsTextFromRows();
+    }
+
+    protected void OnCardUidChanged(Guid rowId, ChangeEventArgs eventArgs)
+    {
+        var row = CardRows.FirstOrDefault(item => item.RowId == rowId);
+        if (row is null)
+        {
+            return;
+        }
+
+        row.CardUid = FormatUidForEditing(eventArgs.Value?.ToString() ?? string.Empty);
+        HasLocalCardEditorChanges = true;
+        RebuildCardsTextFromRows();
+        SaveVehicleProfile(row.CardUid, row.VehicleDescription, row.VehicleNumber);
+    }
+
+    protected void OnCardNumberChanged(Guid rowId, ChangeEventArgs eventArgs)
+    {
+        var row = CardRows.FirstOrDefault(item => item.RowId == rowId);
+        if (row is null)
+        {
+            return;
+        }
+
+        row.VehicleNumber = NormalizeVehicleNumber(eventArgs.Value?.ToString());
+        HasLocalCardEditorChanges = true;
+        SaveVehicleProfile(row.CardUid, row.VehicleDescription, row.VehicleNumber);
+    }
+
+    protected void OnCardDescriptionChanged(Guid rowId, ChangeEventArgs eventArgs)
+    {
+        var row = CardRows.FirstOrDefault(item => item.RowId == rowId);
+        if (row is null)
+        {
+            return;
+        }
+
+        row.VehicleDescription = eventArgs.Value?.ToString()?.Trim() ?? string.Empty;
+        HasLocalCardEditorChanges = true;
+        SaveVehicleProfile(row.CardUid, row.VehicleDescription, row.VehicleNumber);
+    }
+
     private void SaveVehicleDescription(string cardUid, string? description)
+    {
+        SaveVehicleProfile(cardUid, description, null);
+    }
+
+    private void SaveVehicleProfile(string cardUid, string? description, string? vehicleNumber)
     {
         var normalizedUid = NormalizeUid(cardUid);
         if (normalizedUid is null)
@@ -375,6 +486,7 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         var trimmedDescription = string.IsNullOrWhiteSpace(description)
             ? null
             : description.Trim();
+        var normalizedNumber = NormalizeVehicleNumber(vehicleNumber);
         var profiles = RequireAppMemoryStore().GetSmartParkingCardProfiles().ToList();
         var profileIndex = profiles.FindIndex(profile => string.Equals(
             NormalizeUid(profile.CardUid),
@@ -387,15 +499,18 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
             profiles[profileIndex] = profile with
             {
                 VehicleDescription = trimmedDescription,
+                VehicleNumber = string.IsNullOrWhiteSpace(normalizedNumber) ? null : normalizedNumber,
                 DescriptionCreatedAt = trimmedDescription is null
+                                      && string.IsNullOrWhiteSpace(normalizedNumber)
                     ? profile.DescriptionCreatedAt
                     : profile.DescriptionCreatedAt ?? DateTimeOffset.UtcNow,
                 DescriptionSource = trimmedDescription is null
+                                    && string.IsNullOrWhiteSpace(normalizedNumber)
                     ? profile.DescriptionSource
                     : "admin-manual"
             };
         }
-        else if (trimmedDescription is not null)
+        else if (trimmedDescription is not null || !string.IsNullOrWhiteSpace(normalizedNumber))
         {
             profiles.Add(new SmartParkingCardProfile(
                 normalizedUid,
@@ -405,7 +520,9 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
                 trimmedDescription,
                 DateTimeOffset.UtcNow,
                 "admin-manual",
-                IsGeneratedFakeUid(normalizedUid)));
+                IsGeneratedFakeUid(normalizedUid),
+                null,
+                normalizedNumber));
         }
 
         RequireAppMemoryStore().SetSmartParkingCardProfiles(profiles);
@@ -432,7 +549,8 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
                || !EditableSettings.ParkingSpotEnabledStates.SequenceEqual(originalSettings.ParkingSpotEnabledStates)
                || EditableSettings.ParkingStatusUpdateIntervalMs != originalSettings.ParkingStatusUpdateIntervalMs
                || EditableSettings.AllowedCardsText != originalSettings.AllowedCardsText
-               || EditableSettings.BlockedCardsText != originalSettings.BlockedCardsText;
+               || EditableSettings.BlockedCardsText != originalSettings.BlockedCardsText
+               || HasLocalCardEditorChanges;
     }
 
     private ILocalizationService RequireLocalizationService()
@@ -456,30 +574,107 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         return AppMemoryStore ?? throw new InvalidOperationException("App memory store is not available.");
     }
 
-    private IReadOnlyList<AdminCardDescriptionRow> BuildCardRows(string cardsText)
+    private IJSRuntime RequireJsRuntime()
     {
-        var descriptions = RequireAppMemoryStore().GetSmartParkingCardProfiles()
+        return JsRuntime ?? throw new InvalidOperationException("JavaScript runtime is not available.");
+    }
+
+    private void SyncCardRowsFromSettings()
+    {
+        var profiles = RequireAppMemoryStore().GetSmartParkingCardProfiles()
             .Select(profile => new
             {
                 Uid = NormalizeUid(profile.CardUid),
-                profile.VehicleDescription
+                profile.VehicleDescription,
+                VehicleNumber = NormalizeVehicleNumber(profile.VehicleNumber)
             })
             .Where(profile => profile.Uid is not null)
             .ToDictionary(
                 profile => profile.Uid!,
-                profile => profile.VehicleDescription ?? string.Empty,
+                profile => profile,
                 StringComparer.OrdinalIgnoreCase);
 
+        CardRows.Clear();
+        foreach (var uid in ParseCardText(EditableSettings.AllowedCardsText))
+        {
+            CardRows.Add(new AdminCardEditorRow(
+                Guid.NewGuid(),
+                uid,
+                profiles.GetValueOrDefault(uid)?.VehicleNumber ?? string.Empty,
+                profiles.GetValueOrDefault(uid)?.VehicleDescription ?? string.Empty,
+                false));
+        }
+
+        foreach (var uid in ParseCardText(EditableSettings.BlockedCardsText))
+        {
+            CardRows.Add(new AdminCardEditorRow(
+                Guid.NewGuid(),
+                uid,
+                profiles.GetValueOrDefault(uid)?.VehicleNumber ?? string.Empty,
+                profiles.GetValueOrDefault(uid)?.VehicleDescription ?? string.Empty,
+                true));
+        }
+
+        HasLocalCardEditorChanges = false;
+        NeedsIconRefresh = true;
+    }
+
+    private void RebuildCardsTextFromRows()
+    {
+        var allowedCards = new List<string>();
+        var blockedCards = new List<string>();
+        var seenCards = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var row in CardRows)
+        {
+            var normalizedUid = NormalizeUid(row.CardUid);
+            if (normalizedUid is null || !seenCards.Add(normalizedUid))
+            {
+                continue;
+            }
+
+            if (row.IsBlocked)
+            {
+                blockedCards.Add(normalizedUid);
+            }
+            else
+            {
+                allowedCards.Add(normalizedUid);
+            }
+        }
+
+        EditableSettings.AllowedCardsText = string.Join('\n', allowedCards);
+        EditableSettings.BlockedCardsText = string.Join('\n', blockedCards);
+    }
+
+    private static IReadOnlyList<string> ParseCardText(string cardsText)
+    {
         return cardsText.Split(
                 ['\r', '\n'],
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(NormalizeUid)
             .Where(uid => uid is not null)
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(uid => new AdminCardDescriptionRow(
-                uid!,
-                descriptions.GetValueOrDefault(uid!) ?? string.Empty))
+            .Select(uid => uid!)
             .ToArray();
+    }
+
+    private static string FormatUidForEditing(string uid)
+    {
+        var compact = new string((uid ?? string.Empty).Where(char.IsAsciiHexDigit).ToArray()).ToUpperInvariant();
+        return compact.Length <= 8 ? compact : compact[..8];
+    }
+
+    private static string NormalizeVehicleNumber(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var compact = new string(value.Trim().ToUpperInvariant().Where(character =>
+            char.IsAsciiLetterOrDigit(character) || character == '-' || character == '_').ToArray());
+        return compact.Length <= 24 ? compact : compact[..24];
     }
 
     private static string? NormalizeUid(string? uid)
@@ -509,6 +704,7 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         {
             Snapshot = await RequireAdminService().GetSnapshotAsync();
             EditableSettings = Snapshot.EditableSettings.Clone();
+            SyncCardRowsFromSettings();
             StatusMessage = Texts.RefreshSuccessMessage;
             StateHasChanged();
         });
@@ -519,5 +715,17 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
         _ = InvokeAsync(StateHasChanged);
     }
 
-    protected sealed record AdminCardDescriptionRow(string CardUid, string VehicleDescription);
+    protected sealed class AdminCardEditorRow(
+        Guid rowId,
+        string cardUid,
+        string vehicleNumber,
+        string vehicleDescription,
+        bool isBlocked)
+    {
+        public Guid RowId { get; } = rowId;
+        public string CardUid { get; set; } = cardUid;
+        public string VehicleNumber { get; set; } = vehicleNumber;
+        public string VehicleDescription { get; set; } = vehicleDescription;
+        public bool IsBlocked { get; set; } = isBlocked;
+    }
 }

@@ -10,10 +10,7 @@ public sealed class DeviceConnectionService(
     IDeviceTransportService transportService,
     IDeviceSessionService sessionService) : IDeviceConnectionService
 {
-    private static readonly TimeSpan ConnectionAttemptTimeout = TimeSpan.FromSeconds(20);
-#if WINDOWS
-    private static readonly string[] PreferredWindowsTargetOrder = ["COM6", "COM3", "COM4", "COM7"];
-#endif
+    private static readonly TimeSpan ConnectionAttemptTimeout = TimeSpan.FromSeconds(45);
 
     public async Task<IReadOnlyList<ConnectionTarget>> GetTargetsAsync()
     {
@@ -65,30 +62,10 @@ public sealed class DeviceConnectionService(
 
     private static IReadOnlyList<ConnectionTarget> RankTargets(IReadOnlyList<ConnectionTarget> targets)
     {
-#if WINDOWS
         return targets
-            .OrderBy(target => GetWindowsTargetPriority(target.Id))
-            .ThenBy(target => target.Label, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(target => target.Label, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-#else
-        return targets;
-#endif
     }
-
-#if WINDOWS
-    private static int GetWindowsTargetPriority(string targetId)
-    {
-        for (var index = 0; index < PreferredWindowsTargetOrder.Length; index++)
-        {
-            if (string.Equals(targetId, PreferredWindowsTargetOrder[index], StringComparison.OrdinalIgnoreCase))
-            {
-                return index;
-            }
-        }
-
-        return PreferredWindowsTargetOrder.Length;
-    }
-#endif
 
     private async Task<ConnectionResult> RunWithTimeoutAsync(
         Func<CancellationToken, Task<ConnectionResult>> action)
