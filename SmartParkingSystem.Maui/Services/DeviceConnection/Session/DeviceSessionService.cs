@@ -153,49 +153,61 @@ public sealed class DeviceSessionService(
     {
         await DisconnectAsync(cancellationToken);
 
-        if (!await transportService.OpenAsync(target.Id, cancellationToken))
+        try
         {
-            return new ConnectionResult(false);
-        }
+            if (!await transportService.OpenAsync(target.Id, cancellationToken))
+            {
+                return new ConnectionResult(false);
+            }
 
-        if (!await WaitForHelloAsync(cancellationToken))
+            if (!await WaitForHelloAsync(cancellationToken))
+            {
+                await DisconnectAsync(cancellationToken);
+                return new ConnectionResult(false);
+            }
+
+            var profile = await telemetryService.GetProfileAsync(cancellationToken);
+            if (profile is null)
+            {
+                await DisconnectAsync(cancellationToken);
+                return new ConnectionResult(false);
+            }
+
+            var configuration = await telemetryService.GetConfigurationAsync(profile.SlotCount, cancellationToken);
+            if (configuration is null)
+            {
+                await DisconnectAsync(cancellationToken);
+                return new ConnectionResult(false);
+            }
+
+            var snapshot = await telemetryService.GetSnapshotAsync(profile.SlotCount, cancellationToken);
+            if (snapshot is null)
+            {
+                await DisconnectAsync(cancellationToken);
+                return new ConnectionResult(false);
+            }
+
+            SetCurrentSession(
+                new DeviceControllerSession(
+                    target,
+                    profile,
+                    configuration,
+                    snapshot,
+                    DateTimeOffset.UtcNow));
+
+            StartBackgroundRefreshLoop();
+
+            return new ConnectionResult(true);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
         {
             await DisconnectAsync(cancellationToken);
             return new ConnectionResult(false);
         }
-
-        var profile = await telemetryService.GetProfileAsync(cancellationToken);
-        if (profile is null)
-        {
-            await DisconnectAsync(cancellationToken);
-            return new ConnectionResult(false);
-        }
-
-        var configuration = await telemetryService.GetConfigurationAsync(profile.SlotCount, cancellationToken);
-        if (configuration is null)
-        {
-            await DisconnectAsync(cancellationToken);
-            return new ConnectionResult(false);
-        }
-
-        var snapshot = await telemetryService.GetSnapshotAsync(profile.SlotCount, cancellationToken);
-        if (snapshot is null)
-        {
-            await DisconnectAsync(cancellationToken);
-            return new ConnectionResult(false);
-        }
-
-        SetCurrentSession(
-            new DeviceControllerSession(
-                target,
-                profile,
-                configuration,
-                snapshot,
-                DateTimeOffset.UtcNow));
-
-        StartBackgroundRefreshLoop();
-
-        return new ConnectionResult(true);
     }
 
     private async Task<bool> WaitForHelloAsync(CancellationToken cancellationToken)
