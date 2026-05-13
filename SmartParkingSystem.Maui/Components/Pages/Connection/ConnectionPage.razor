@@ -24,22 +24,25 @@
                                         OnAutomaticSelected="() => SetMode(ConnectionMode.Automatic)"
                                         OnAdvancedSelected="() => SetMode(ConnectionMode.Advanced)"/>
 
-                    <div class="mt-8 flex-1 rounded-md bg-calm-50 p-5 transition-all duration-500 sm:p-6">
+                    <div class="mt-8 flex min-h-[20rem] flex-1 flex-col rounded-md bg-calm-50 p-5 transition-all duration-500 sm:p-6">
                         @if (State.SelectedMode == ConnectionMode.Automatic)
                         {
                             <AutomaticConnectionPanel ContentClass="@GetModeContentClass()"
                                                       PrimaryButtonClass="@PrimaryButtonClass"
-                                                      ButtonText="@Texts.AutomaticButton"
+                                                      BluetoothButtonText="@Texts.BluetoothConnectButton"
+                                                      UsbButtonText="@Texts.UsbConnectButton"
                                                       Description="@State.AutomaticDescription"
                                                       IsBusy="@State.IsBusy"
-                                                      OnConnect="TryAutoConnectAsync"/>
+                                                      OnConnectBluetooth="TryAutoConnectAsync"
+                                                      OnConnectUsb="TryAutoConnectAsync"/>
                         }
                         else
                         {
                             <AdvancedConnectionPanel ContentClass="@GetModeContentClass()"
                                                      DeviceLabel="@Texts.DeviceOrPortLabel"
                                                      RefreshButtonText="@Texts.RefreshButton"
-                                                     ConnectButtonText="@Texts.ManualConnectButton"
+                                                     BluetoothConnectButtonText="@Texts.BluetoothConnectButton"
+                                                     UsbConnectButtonText="@Texts.UsbConnectButton"
                                                      WarningButtonClass="@WarningButtonClass"
                                                      SecondaryButtonClass="@SecondaryButtonClass"
                                                      Description="@State.AdvancedDescription"
@@ -48,7 +51,8 @@
                                                      SelectedTargetIdChanged="OnSelectedTargetChanged"
                                                      Targets="@State.Targets"
                                                      OnRefresh="RefreshTargetsAsync"
-                                                     OnConnect="TryManualConnectAsync"/>
+                                                     OnConnectBluetooth="TryManualConnectAsync"
+                                                     OnConnectUsb="TryManualConnectAsync"/>
                         }
                     </div>
                 </div>

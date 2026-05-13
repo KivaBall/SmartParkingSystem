@@ -15,7 +15,10 @@ public class AdvancedConnectionPanelBase : ComponentBase
     public string RefreshButtonText { get; set; } = string.Empty;
 
     [Parameter]
-    public string ConnectButtonText { get; set; } = string.Empty;
+    public string BluetoothConnectButtonText { get; set; } = string.Empty;
+
+    [Parameter]
+    public string UsbConnectButtonText { get; set; } = string.Empty;
 
     [Parameter]
     public string WarningButtonClass { get; set; } = string.Empty;
@@ -42,5 +45,8 @@ public class AdvancedConnectionPanelBase : ComponentBase
     public EventCallback OnRefresh { get; set; }
 
     [Parameter]
-    public EventCallback OnConnect { get; set; }
+    public EventCallback OnConnectBluetooth { get; set; }
+
+    [Parameter]
+    public EventCallback OnConnectUsb { get; set; }
 }
