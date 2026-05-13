@@ -1,4 +1,3 @@
-#include <SoftwareSerial.h>
 #include <Adafruit_NeoPixel.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -49,12 +48,10 @@
 // -----------------------------------------------------------------------------
 // Bluetooth
 // -----------------------------------------------------------------------------
-// Demo-контролер працює через SoftwareSerial:
-// D2 = RX
-// D3 = TX
-// HC-06 TXD -> D2
-// HC-06 RXD <- D3 через дільник
-SoftwareSerial btSerial(2, 3);
+// Demo-контролер на Arduino Mega працює через апаратний Serial1:
+// HC-05/HC-06 TXD -> Mega D19 RX1
+// HC-05/HC-06 RXD -> Mega D18 TX1 через дільник напруги
+#define btSerial Serial1
 
 // -----------------------------------------------------------------------------
 // RFID
@@ -83,14 +80,14 @@ Servo gateServo;
 // -----------------------------------------------------------------------------
 constexpr uint8_t SERVO_PIN = 5;
 constexpr uint8_t SLOT_COUNT = 6;
-constexpr uint8_t MAX_ALLOWED_CARD_COUNT = 12;
-constexpr uint8_t MAX_BLOCKED_CARD_COUNT = 4;
+constexpr uint8_t MAX_ALLOWED_CARD_COUNT = 20;
+constexpr uint8_t MAX_BLOCKED_CARD_COUNT = 20;
 constexpr uint8_t UID_LENGTH = 4;
 constexpr uint8_t DISPLAY_TEXT_LENGTH = 16;
 constexpr uint8_t NO_PIN = 255;
 constexpr long BT_BAUD_RATE = 9600;
 constexpr uint16_t CONFIG_SIGNATURE = 0x5350;
-constexpr uint8_t CONFIG_VERSION = 6;
+constexpr uint8_t CONFIG_VERSION = 7;
 constexpr unsigned long LCD_MESSAGE_DURATION_MS = 3000UL;
 constexpr size_t RX_BUFFER_SIZE = 80;
 constexpr uint8_t DEFAULT_SLOT_ENABLED_MASK = 0x07;
@@ -105,6 +102,7 @@ constexpr unsigned long DEMO_GATE_PASSAGE_OCCUPIED_AFTER_OPEN_MS = 900UL;
 constexpr unsigned long DEMO_GATE_PASSAGE_FREE_AFTER_OPEN_MS = 1800UL;
 constexpr unsigned long GATE_PASSAGE_AUTO_EXIT_COOLDOWN_MS = 3000UL;
 constexpr uint8_t GATE_PASSAGE_STABILITY_READS = 2;
+constexpr uint8_t SLOT_STABILITY_READS = 2;
 constexpr uint8_t ROUTE_LED_STRIP_COUNT = 3;
 constexpr uint8_t ROUTE_LED_COUNT_PER_STRIP = 8;
 constexpr uint8_t ROUTE_LED_BRIGHTNESS = 80;
@@ -229,6 +227,8 @@ unsigned long lastAutoExitOpenAt = 0;
 // slotDistanceCm    - остання виміряна відстань
 unsigned long slotOccupiedSince[SLOT_COUNT] = {0};
 bool slotOccupied[SLOT_COUNT] = {false};
+bool pendingSlotOccupied[SLOT_COUNT] = {false};
+uint8_t slotStableReads[SLOT_COUNT] = {0};
 int16_t slotDistanceCm[SLOT_COUNT] = {0};
 uint8_t activeRouteSlot = 0;
 char lastAccessUid[UID_LENGTH * 2 + 1] = "";
@@ -416,14 +416,14 @@ void setDefaultConfig()
 
     config.servoOpenAngle = 90;
     config.servoClosedAngle = 0;
-    config.servoOpenDurationMs = 3000;
-    config.occupiedThresholdCm = 20;
+    config.servoOpenDurationMs = 8000;
+    config.occupiedThresholdCm = 10;
     config.telemetryIntervalMs = 500;
     config.forceGateOpen = 0;
     config.forceGateLock = 0;
     config.autoExitOpenEnabled = 0;
     config.autoCloseAfterPassEnabled = 1;
-    config.gatePassageThresholdCm = 20;
+    config.gatePassageThresholdCm = 10;
 
     config.slotEnabledMask = DEFAULT_SLOT_ENABLED_MASK;
     config.displayForceEnabled = 0;
@@ -437,16 +437,15 @@ void setDefaultConfig()
     // Дефолтний список дозволених карток.
     config.allowedCount = 3;
     byte defaultAllowed[3][UID_LENGTH] = {
-        {0xB0, 0x41, 0xCE, 0x32},
-        {0x83, 0x68, 0x4C, 0xAB},
-        {0x33, 0x04, 0x84, 0xAB}};
+        {0x42, 0xA0, 0x74, 0x06},
+        {0x8A, 0x31, 0x08, 0x35},
+        {0xFC, 0x64, 0x74, 0x06}};
     memcpy(config.allowedCards, defaultAllowed, sizeof(defaultAllowed));
 
     // Дефолтний список заблокованих карток.
-    config.blockedCount = 2;
-    byte defaultBlocked[2][UID_LENGTH] = {
-        {0x43, 0x36, 0x54, 0xAB},
-        {0xE3, 0x6A, 0x3B, 0xAB}};
+    config.blockedCount = 1;
+    byte defaultBlocked[1][UID_LENGTH] = {
+        {0x25, 0x9F, 0x15, 0xE0}};
     memcpy(config.blockedCards, defaultBlocked, sizeof(defaultBlocked));
 }
 
@@ -772,6 +771,8 @@ void updateParkingStates()
         {
             slotDistanceCm[i] = -1;
             slotOccupied[i] = false;
+            pendingSlotOccupied[i] = false;
+            slotStableReads[i] = 0;
             slotOccupiedSince[i] = 0;
             continue;
         }
@@ -780,26 +781,49 @@ void updateParkingStates()
         {
             slotDistanceCm[i] = -1;
             slotOccupied[i] = false;
+            pendingSlotOccupied[i] = false;
+            slotStableReads[i] = 0;
             slotOccupiedSince[i] = 0;
             continue;
         }
 
         long distance = readDistanceCm(trigPins[i], echoPins[i]);
         slotDistanceCm[i] = distance;
+        if (distance == -1)
+        {
+            continue;
+        }
 
-        bool isOccupiedNow = distance != -1 && distance < config.occupiedThresholdCm;
+        bool measuredOccupied = distance < config.occupiedThresholdCm;
+        if (measuredOccupied == pendingSlotOccupied[i])
+        {
+            if (slotStableReads[i] < SLOT_STABILITY_READS)
+            {
+                slotStableReads[i]++;
+            }
+        }
+        else
+        {
+            pendingSlotOccupied[i] = measuredOccupied;
+            slotStableReads[i] = 1;
+        }
 
-        if (isOccupiedNow && !slotOccupied[i])
+        if (slotStableReads[i] < SLOT_STABILITY_READS)
+        {
+            continue;
+        }
+
+        if (measuredOccupied && !slotOccupied[i])
         {
             slotOccupiedSince[i] = millis();
         }
 
-        if (!isOccupiedNow)
+        if (!measuredOccupied)
         {
             slotOccupiedSince[i] = 0;
         }
 
-        slotOccupied[i] = isOccupiedNow;
+        slotOccupied[i] = measuredOccupied;
     }
 }
 
@@ -1974,14 +1998,14 @@ void startDemoGatePassageCycle()
 // Штучно відкриває ворота так, ніби була проведена дозволена картка.
 void triggerDemoCardEvent()
 {
-    byte demoUid[UID_LENGTH] = {0xB0, 0x41, 0xCE, 0x32};
+    byte demoUid[UID_LENGTH] = {0x42, 0xA0, 0x74, 0x06};
 
     if (config.forceGateLock)
     {
         setTransientDisplayText(config.displayLockedText);
         setLastAccessEvent(demoUid, "LOCKED");
         beginProtocolFrame();
-        btSerial.print(F("LOCKED|uid=B041CE32"));
+        btSerial.print(F("LOCKED|uid=42A07406"));
         endProtocolFrame();
         return;
     }
@@ -1995,7 +2019,7 @@ void triggerDemoCardEvent()
     setTransientDisplayText(config.displayAllowedText);
     setLastAccessEvent(demoUid, "ALLOWED");
     beginProtocolFrame();
-    btSerial.print(F("ALLOWED|uid=B041CE32"));
+    btSerial.print(F("ALLOWED|uid=42A07406"));
     endProtocolFrame();
 }
 

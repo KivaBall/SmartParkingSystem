@@ -9,4 +9,5 @@ public sealed record SmartParkingCardProfile(
     DateTimeOffset? DescriptionCreatedAt = null,
     string? DescriptionSource = null,
     bool IsGeneratedFakeUid = false,
-    string? LastAiResult = null);
+    string? LastAiResult = null,
+    string? VehicleNumber = null);
