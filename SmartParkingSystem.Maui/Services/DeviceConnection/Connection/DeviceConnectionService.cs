@@ -30,7 +30,7 @@ public sealed class DeviceConnectionService(
             return new ConnectionResult(false);
         }
 
-        var targets = RankTargets(await transportService.DiscoverTargetsAsync());
+        var targets = FilterAutoTargets(RankTargets(await transportService.DiscoverTargetsAsync()));
         return await RunWithTimeoutAsync(token => sessionService.TryAutoOpenSessionAsync(targets, token));
     }
 
@@ -65,6 +65,25 @@ public sealed class DeviceConnectionService(
         return targets
             .OrderBy(target => target.Label, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static IReadOnlyList<ConnectionTarget> FilterAutoTargets(IReadOnlyList<ConnectionTarget> targets)
+    {
+        var likelyControllerTargets = targets
+            .Where(IsLikelyControllerTarget)
+            .ToArray();
+
+        return likelyControllerTargets.Length > 0 ? likelyControllerTargets : targets;
+    }
+
+    private static bool IsLikelyControllerTarget(ConnectionTarget target)
+    {
+        var value = $"{target.Label} {target.Id}";
+        return value.Contains("HC-05", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("HC-06", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("Arduino", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("SPS", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("SmartParking", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<ConnectionResult> RunWithTimeoutAsync(

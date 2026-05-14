@@ -214,7 +214,11 @@ public sealed class DeviceSessionService(
     {
         for (var attempt = 0; attempt < HelloAttempts; attempt++)
         {
-            await transportService.DrainAsync(InitialDrainWindow, cancellationToken);
+            if (await DrainUntilIdleOrHelloAsync(cancellationToken))
+            {
+                return true;
+            }
+
             await transportService.SendLineAsync("HELLO SPS", cancellationToken);
 
             var timeoutAt = DateTimeOffset.UtcNow.AddMilliseconds(HelloAttemptWindowMs);
@@ -234,6 +238,23 @@ public sealed class DeviceSessionService(
         }
 
         return false;
+    }
+
+    private async Task<bool> DrainUntilIdleOrHelloAsync(CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            var line = await transportService.ReadLineAsync(InitialDrainWindow, cancellationToken);
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return false;
+            }
+
+            if (DeviceProtocolParser.IsHelloOk(line))
+            {
+                return true;
+            }
+        }
     }
 
     private void StartBackgroundRefreshLoop()

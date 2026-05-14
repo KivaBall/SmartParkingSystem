@@ -15,11 +15,18 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
                                                              "The Bluetooth SPP UUID could not be created.");
 
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
-    private readonly StringBuilder _readBuffer = new StringBuilder();
+    private static readonly TimeSpan OpenWarmupDelay = TimeSpan.FromMilliseconds(300);
+
+    private readonly object _lineSync = new();
+    private readonly Queue<string> _completedLines = new();
+    private readonly SemaphoreSlim _lineSignal = new(0);
+    private readonly StringBuilder _partialLine = new();
 
     private BluetoothSocket? _bluetoothSocket;
     private Stream? _inputStream;
     private Stream? _outputStream;
+    private CancellationTokenSource? _readerCancellationTokenSource;
+    private Task? _readerTask;
 
     public bool IsOpen => _bluetoothSocket?.IsConnected == true;
 
@@ -34,7 +41,7 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
             return Task.FromResult<IReadOnlyList<ConnectionTarget>>([]);
         }
 
-        var targets = adapter.BondedDevices?
+        var targets = (adapter.BondedDevices?.ToArray() ?? [])
             .Select(device =>
             {
                 var address = device.Address ?? string.Empty;
@@ -44,16 +51,17 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
 
                 return new ConnectionTarget(address, label);
             })
-            .OrderBy(target => target.Label, StringComparer.OrdinalIgnoreCase)
             .Where(target => !string.IsNullOrWhiteSpace(target.Id))
+            .OrderBy(target => target.Label, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        return Task.FromResult<IReadOnlyList<ConnectionTarget>>(targets ?? []);
+        return Task.FromResult<IReadOnlyList<ConnectionTarget>>(targets);
     }
 
     public async Task<bool> OpenAsync(string targetId, CancellationToken cancellationToken = default)
     {
         await CloseAsync(cancellationToken);
+        ResetLines();
 
         var adapter = GetBluetoothAdapter();
         if (adapter is null || !adapter.IsEnabled)
@@ -61,98 +69,58 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
             return false;
         }
 
-        var device = adapter.BondedDevices?.FirstOrDefault(candidate => string.Equals(
-            candidate.Address,
-            targetId,
-            StringComparison.OrdinalIgnoreCase));
+        var device = (adapter.BondedDevices?.ToArray() ?? [])
+            .FirstOrDefault(candidate => string.Equals(
+                candidate.Address,
+                targetId,
+                StringComparison.OrdinalIgnoreCase));
 
         if (device is null)
         {
             return false;
         }
 
-        BluetoothSocket? candidateSocket = null;
+        adapter.CancelDiscovery();
 
-        try
+        var socket = await OpenSocketAsync(device, cancellationToken);
+        if (socket is null)
         {
-            adapter.CancelDiscovery();
-            candidateSocket = await TryOpenSocketAsync(
-                device,
-                candidate => candidate.CreateRfcommSocketToServiceRecord(SerialPortProfileUuid),
-                cancellationToken);
-
-            if (candidateSocket is null)
-            {
-                candidateSocket = await TryOpenSocketAsync(
-                    device,
-                    candidate => candidate.CreateInsecureRfcommSocketToServiceRecord(SerialPortProfileUuid),
-                    cancellationToken);
-            }
-
-            if (candidateSocket is null)
-            {
-                return false;
-            }
-
-            _bluetoothSocket = candidateSocket;
-            _inputStream = candidateSocket.InputStream;
-            _outputStream = candidateSocket.OutputStream;
-            ActiveTargetId = targetId;
-            _readBuffer.Clear();
-
-            await Task.Delay(300, cancellationToken);
-            return true;
-        }
-        catch
-        {
-            if (candidateSocket is not null)
-            {
-                try
-                {
-                    candidateSocket.Close();
-                }
-                catch
-                {
-                    // Socket close is best-effort after a failed open attempt.
-                }
-
-                candidateSocket.Dispose();
-            }
-
-            _bluetoothSocket = null;
-            _inputStream = null;
-            _outputStream = null;
-            ActiveTargetId = null;
-            _readBuffer.Clear();
             return false;
         }
+
+        _bluetoothSocket = socket;
+        _inputStream = socket.InputStream;
+        _outputStream = socket.OutputStream;
+        ActiveTargetId = targetId;
+        StartReader();
+
+        await Task.Delay(OpenWarmupDelay, cancellationToken);
+        return true;
     }
 
-    public Task CloseAsync(CancellationToken cancellationToken = default)
+    public async Task CloseAsync(CancellationToken cancellationToken = default)
     {
-        _inputStream?.Dispose();
-        _outputStream?.Dispose();
+        _readerCancellationTokenSource?.Cancel();
 
-        if (_bluetoothSocket is not null)
+        CloseSocket();
+
+        if (_readerTask is not null)
         {
             try
             {
-                _bluetoothSocket.Close();
+                await _readerTask.WaitAsync(TimeSpan.FromMilliseconds(500), cancellationToken);
             }
             catch
             {
-                // Android Bluetooth sockets can already be closed by the platform at this point.
+                // Closing the socket is enough to stop Android's blocking read in normal cases.
             }
-
-            _bluetoothSocket.Dispose();
         }
 
-        _bluetoothSocket = null;
-        _inputStream = null;
-        _outputStream = null;
+        _readerTask = null;
+        _readerCancellationTokenSource?.Dispose();
+        _readerCancellationTokenSource = null;
         ActiveTargetId = null;
-        _readBuffer.Clear();
-        return Task.CompletedTask;
+        ResetLines();
     }
 
     public async Task SendLineAsync(string line, CancellationToken cancellationToken = default)
@@ -162,62 +130,26 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
             throw new InvalidOperationException("Transport is not open.");
         }
 
-        var framedLine = $"{DeviceTransportFraming.WrapPayload(line)}\n";
-        var payload = Encoding.ASCII.GetBytes(framedLine);
+        var payload = Encoding.ASCII.GetBytes($"{DeviceTransportFraming.WrapPayload(line)}\n");
         await _outputStream.WriteAsync(payload, cancellationToken);
         await _outputStream.FlushAsync(cancellationToken);
     }
 
     public async Task<string?> ReadLineAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
-        if (_inputStream is null || !IsOpen)
+        if (!IsOpen && _lineSignal.CurrentCount <= 0)
         {
             return null;
         }
 
-        var line = TryReadBufferedLine();
-        if (line is not null)
+        if (!await _lineSignal.WaitAsync(timeout, cancellationToken))
         {
-            return DeviceTransportFraming.UnwrapPayload(line);
+            return null;
         }
 
-        var deadline = DateTimeOffset.UtcNow.Add(timeout);
-        var tempBuffer = new byte[256];
-
-        while (DateTimeOffset.UtcNow < deadline)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var remaining = deadline - DateTimeOffset.UtcNow;
-            if (remaining <= TimeSpan.Zero)
-            {
-                return null;
-            }
-
-            try
-            {
-                var bytesRead = await _inputStream
-                    .ReadAsync(tempBuffer.AsMemory(0, tempBuffer.Length), cancellationToken)
-                    .AsTask()
-                    .WaitAsync(remaining, cancellationToken);
-
-                if (bytesRead > 0)
-                {
-                    _readBuffer.Append(Encoding.ASCII.GetString(tempBuffer, 0, bytesRead));
-                    line = TryReadBufferedLine();
-                    if (line is not null)
-                    {
-                        return DeviceTransportFraming.UnwrapPayload(line);
-                    }
-                }
-            }
-            catch (TimeoutException)
-            {
-                return null;
-            }
-        }
-
-        return null;
+        return TryDequeueLine(out var line)
+            ? DeviceTransportFraming.UnwrapPayload(line)
+            : null;
     }
 
     public async Task DrainAsync(TimeSpan idleTimeout, CancellationToken cancellationToken = default)
@@ -232,78 +164,227 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
         }
     }
 
-    private static async Task<BluetoothSocket?> TryOpenSocketAsync(
+    private async Task<BluetoothSocket?> OpenSocketAsync(
         BluetoothDevice device,
-        Func<BluetoothDevice, BluetoothSocket?> socketFactory,
         CancellationToken cancellationToken)
     {
-        BluetoothSocket? candidateSocket = null;
+        var attempts = new (string Label, Func<BluetoothSocket?> CreateSocket)[]
+        {
+            ("secure RFCOMM", () => device.CreateRfcommSocketToServiceRecord(SerialPortProfileUuid)),
+            ("insecure RFCOMM", () => device.CreateInsecureRfcommSocketToServiceRecord(SerialPortProfileUuid))
+        };
+
+        foreach (var attempt in attempts)
+        {
+            var socket = await TryOpenSocketAsync(attempt.Label, attempt.CreateSocket, cancellationToken);
+            if (socket is not null)
+            {
+                return socket;
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task<BluetoothSocket?> TryOpenSocketAsync(
+        string attemptLabel,
+        Func<BluetoothSocket?> createSocket,
+        CancellationToken cancellationToken)
+    {
+        BluetoothSocket? socket = null;
 
         try
         {
-            candidateSocket = socketFactory(device);
-            if (candidateSocket is null)
+            socket = createSocket();
+            if (socket is null)
             {
                 return null;
             }
 
-            var connectTask = Task.Run(() => candidateSocket.Connect(), cancellationToken);
+            var connectTask = Task.Run(socket.Connect);
             var completedTask = await Task.WhenAny(connectTask, Task.Delay(ConnectTimeout, cancellationToken));
             if (completedTask != connectTask)
             {
-                CleanupCandidateSocket(candidateSocket);
+                CleanupSocketInBackground(socket);
                 return null;
             }
 
             await connectTask;
-            return candidateSocket;
+            return socket.IsConnected ? socket : null;
         }
         catch
         {
-            if (candidateSocket is not null)
+            if (socket is not null)
             {
-                CleanupCandidateSocket(candidateSocket);
+                CleanupSocket(socket);
             }
 
             return null;
         }
     }
 
-    private static void CleanupCandidateSocket(BluetoothSocket candidateSocket)
+    private void StartReader()
+    {
+        _readerCancellationTokenSource?.Cancel();
+        _readerCancellationTokenSource?.Dispose();
+        _readerCancellationTokenSource = new CancellationTokenSource();
+        _readerTask = Task.Run(() => RunReaderAsync(_readerCancellationTokenSource.Token));
+    }
+
+    private async Task RunReaderAsync(CancellationToken cancellationToken)
+    {
+        var buffer = new byte[256];
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var inputStream = _inputStream;
+            if (inputStream is null)
+            {
+                return;
+            }
+
+            int bytesRead;
+            try
+            {
+                bytesRead = await inputStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
+            catch
+            {
+                return;
+            }
+
+            if (bytesRead <= 0)
+            {
+                await Task.Delay(20, cancellationToken);
+                continue;
+            }
+
+            AppendReceivedText(Encoding.ASCII.GetString(buffer, 0, bytesRead));
+        }
+    }
+
+    private void AppendReceivedText(string text)
+    {
+        lock (_lineSync)
+        {
+            foreach (var character in text)
+            {
+                if (character == '\r')
+                {
+                    continue;
+                }
+
+                if (character == '\n')
+                {
+                    EnqueueCurrentLine();
+                    continue;
+                }
+
+                _partialLine.Append(character);
+            }
+        }
+    }
+
+    private void EnqueueCurrentLine()
+    {
+        var line = _partialLine.ToString().Trim();
+        _partialLine.Clear();
+
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            return;
+        }
+
+        _completedLines.Enqueue(line);
+        _lineSignal.Release();
+    }
+
+    private bool TryDequeueLine(out string line)
+    {
+        lock (_lineSync)
+        {
+            if (_completedLines.Count > 0)
+            {
+                line = _completedLines.Dequeue();
+                return true;
+            }
+        }
+
+        line = string.Empty;
+        return false;
+    }
+
+    private void ResetLines()
+    {
+        lock (_lineSync)
+        {
+            _completedLines.Clear();
+            _partialLine.Clear();
+            while (_lineSignal.CurrentCount > 0)
+            {
+                _lineSignal.Wait(0);
+            }
+        }
+    }
+
+    private void CloseSocket()
     {
         try
         {
-            candidateSocket.Close();
+            _inputStream?.Dispose();
         }
         catch
         {
-            // Socket close is best-effort during fallback cleanup.
         }
 
-        candidateSocket.Dispose();
+        try
+        {
+            _outputStream?.Dispose();
+        }
+        catch
+        {
+        }
+
+        if (_bluetoothSocket is not null)
+        {
+            CleanupSocket(_bluetoothSocket);
+        }
+
+        _bluetoothSocket = null;
+        _inputStream = null;
+        _outputStream = null;
+    }
+
+    private static void CleanupSocketInBackground(BluetoothSocket socket)
+    {
+        _ = Task.Run(() => CleanupSocket(socket));
+    }
+
+    private static void CleanupSocket(BluetoothSocket socket)
+    {
+        try
+        {
+            socket.Close();
+        }
+        catch
+        {
+        }
+
+        socket.Dispose();
     }
 
     private static BluetoothAdapter? GetBluetoothAdapter()
     {
         var manager = Application.Context.GetSystemService(Context.BluetoothService) as BluetoothManager;
         return manager?.Adapter;
-    }
-
-    private string? TryReadBufferedLine()
-    {
-        for (var index = 0; index < _readBuffer.Length; index++)
-        {
-            if (_readBuffer[index] != '\n')
-            {
-                continue;
-            }
-
-            var line = _readBuffer.ToString(0, index).Trim();
-            _readBuffer.Remove(0, index + 1);
-            return line;
-        }
-
-        return null;
     }
 }
 #endif

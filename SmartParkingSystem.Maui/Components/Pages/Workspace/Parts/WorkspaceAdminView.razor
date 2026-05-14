@@ -2,11 +2,21 @@
 @inherits WorkspaceAdminViewBase
 
 <style>
+    .workspace-admin-action-grid {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+
     @@media (min-width: 768px) {
         .workspace-admin-actions {
             position: sticky;
             top: 8.25rem;
             z-index: 20;
+        }
+    }
+
+    @@media (min-width: 1280px) {
+        .workspace-admin-action-grid {
+            grid-template-columns: minmax(0, 1.2fr) auto auto auto;
         }
     }
 </style>
@@ -22,35 +32,33 @@
     else
     {
         <section class="@ActionsClass" style="@ActionsStyle">
-            <div class="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div class="grid gap-3 workspace-admin-action-grid">
                 <div class="flex min-h-12 items-center justify-center rounded-md bg-white/70 px-4 py-3 lg:justify-start">
                     <p class="text-sm font-semibold text-calm-700">
                         @StatusMessage
                     </p>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3">
-                    <button class="inline-flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-md bg-mint-300 px-2 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-mint-200 disabled:cursor-default disabled:opacity-50 sm:px-4"
-                            disabled="@IsBusy"
-                            @onclick="RefreshAsync">
-                        <i data-lucide="refresh-cw"></i>
-                        <span>@Texts.RefreshButton</span>
-                    </button>
+                <button class="inline-flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-md bg-mint-300 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-mint-200 disabled:cursor-default disabled:opacity-50"
+                        disabled="@IsBusy"
+                        @onclick="RefreshAsync">
+                    <i data-lucide="refresh-cw"></i>
+                    <span>@Texts.RefreshButton</span>
+                </button>
 
-                    <button class="inline-flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-md bg-brand-300 px-2 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-brand-400 disabled:cursor-default disabled:opacity-50 sm:px-4"
-                            disabled="@(!HasChanges || IsBusy)"
-                            @onclick="SaveAsync">
-                        <i data-lucide="save"></i>
-                        <span>@Texts.SaveButton</span>
-                    </button>
+                <button class="inline-flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-md bg-brand-300 px-4 py-3 text-sm font-semibold text-calm-900 transition-all duration-500 ease-out hover:bg-brand-400 disabled:cursor-default disabled:opacity-50"
+                        disabled="@(!HasChanges || IsBusy)"
+                        @onclick="SaveAsync">
+                    <i data-lucide="save"></i>
+                    <span>@Texts.SaveButton</span>
+                </button>
 
-                    <button class="inline-flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-md bg-warm-300 px-2 py-3 text-sm font-semibold text-warm-700 transition-all duration-500 ease-out hover:bg-warm-200 disabled:cursor-default disabled:opacity-50 sm:px-4"
-                            disabled="@IsBusy"
-                            @onclick="ResetAsync">
-                        <i data-lucide="rotate-ccw"></i>
-                        <span>@Texts.ResetButton</span>
-                    </button>
-                </div>
+                <button class="inline-flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-md bg-warm-300 px-4 py-3 text-sm font-semibold text-warm-700 transition-all duration-500 ease-out hover:bg-warm-200 disabled:cursor-default disabled:opacity-50"
+                        disabled="@IsBusy"
+                        @onclick="ResetAsync">
+                    <i data-lucide="rotate-ccw"></i>
+                    <span>@Texts.ResetButton</span>
+                </button>
             </div>
         </section>
 
