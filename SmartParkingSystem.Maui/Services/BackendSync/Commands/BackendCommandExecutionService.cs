@@ -137,7 +137,8 @@ public sealed class BackendCommandExecutionService(
                 Number = ParseSlotNumber(slot.Id)
             })
             .Where(item => item.Number is >= 1 and <= 3)
-            .OrderBy(item => item.Number)
+            .OrderBy(item => GetPhysicalRouteRank(item.Number.GetValueOrDefault()))
+            .ThenBy(item => item.Number)
             .FirstOrDefault()
             ?.Slot;
 
@@ -155,5 +156,16 @@ public sealed class BackendCommandExecutionService(
         return slotId.Length >= 2 && slotId[0] == 'P' && int.TryParse(slotId[1..], out var number)
             ? number
             : null;
+    }
+
+    private static int GetPhysicalRouteRank(int slotNumber)
+    {
+        return slotNumber switch
+        {
+            1 => 0,
+            3 => 1,
+            2 => 2,
+            _ => slotNumber
+        };
     }
 }
