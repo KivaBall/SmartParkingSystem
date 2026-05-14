@@ -6,7 +6,7 @@
 
 Цей документ залишений як архів старої мінімальної схеми. Для нової збірки бери **Arduino Mega 2560**.
 
-> Поточна прошивка (`SmartParkingSystemController.ino`) орієнтована на Mega-розкладку, зокрема на LED-маршрути `D22/D23/D24`, яких на Uno/Nano фізично немає.
+> Поточна прошивка (`SmartParkingSystemController.ino`) орієнтована на Mega-розкладку, зокрема на одну адресну LED-стрічку маршруту на `D22`.
 
 > Camera AI RFID update: the current feature set also needs a fifth HC-SR04 sensor before the gate on Mega pins `D25/D26`, larger allowed/blocked RFID card capacity, and extra telemetry fields (`front_occupied`, `front_distance_cm`, `front_counter`). Treat Uno/Nano as legacy documentation only; do not try to wire the current AI/route LED build from this file.
 

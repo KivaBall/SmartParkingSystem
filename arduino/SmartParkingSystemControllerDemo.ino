@@ -103,9 +103,12 @@ constexpr unsigned long DEMO_GATE_PASSAGE_FREE_AFTER_OPEN_MS = 1800UL;
 constexpr unsigned long GATE_PASSAGE_AUTO_EXIT_COOLDOWN_MS = 3000UL;
 constexpr uint8_t GATE_PASSAGE_STABILITY_READS = 2;
 constexpr uint8_t SLOT_STABILITY_READS = 2;
-constexpr uint8_t ROUTE_LED_STRIP_COUNT = 3;
-constexpr uint8_t ROUTE_LED_COUNT_PER_STRIP = 8;
+constexpr uint8_t ROUTE_LED_SLOT_COUNT = 3;
+constexpr uint8_t ROUTE_LED_COUNT = 15;
 constexpr uint8_t ROUTE_LED_BRIGHTNESS = 80;
+constexpr uint8_t ROUTE_LED_PIN = 22;
+constexpr uint8_t ROUTE_LED_EXTRA_ROUTE_START = 10;
+constexpr uint8_t DISABLED_ROUTE_LED_COUNT = 7;
 
 // -----------------------------------------------------------------------------
 // Піни паркомісць
@@ -120,12 +123,12 @@ constexpr uint8_t GATE_PASSAGE_ECHO_PIN = A3;
 constexpr uint8_t FRONT_ACCESS_TRIG_PIN = 25;
 constexpr uint8_t FRONT_ACCESS_ECHO_PIN = 26;
 
-// Addressable LED route strips. Use Arduino Mega pins: one strip guides to one physical slot.
-const uint8_t routeLedPins[ROUTE_LED_STRIP_COUNT] = {22, 23, 24};
-Adafruit_NeoPixel routeLedStrips[ROUTE_LED_STRIP_COUNT] = {
-    Adafruit_NeoPixel(ROUTE_LED_COUNT_PER_STRIP, routeLedPins[0], NEO_GRB + NEO_KHZ800),
-    Adafruit_NeoPixel(ROUTE_LED_COUNT_PER_STRIP, routeLedPins[1], NEO_GRB + NEO_KHZ800),
-    Adafruit_NeoPixel(ROUTE_LED_COUNT_PER_STRIP, routeLedPins[2], NEO_GRB + NEO_KHZ800)};
+// Single addressable route strip on D22.
+// Physical parking LEDs go 1..10 around the layout; logical slots map to LEDs 1, 5 and 8.
+const uint8_t routeLedSlotIndexes[ROUTE_LED_SLOT_COUNT] = {0, 4, 7};
+const uint8_t routeLedExtraEndIndexes[ROUTE_LED_SLOT_COUNT] = {11, 13, 14};
+const uint8_t disabledRouteLedIndexes[DISABLED_ROUTE_LED_COUNT] = {1, 2, 3, 5, 6, 8, 9};
+Adafruit_NeoPixel routeLedStrip(ROUTE_LED_COUNT, ROUTE_LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // -----------------------------------------------------------------------------
 // Стан воріт
@@ -266,6 +269,10 @@ void updateGatePassageAutomation();
 void updateParkingStates();
 void setupRouteLedStrips();
 void clearRouteLedStrips();
+void refreshRouteLedStrips();
+void renderDisabledRouteLeds();
+void renderActiveRouteSlotLeds();
+void renderActiveRouteSlotLed(uint8_t slotIndex, uint32_t color);
 void showRouteToSlot(uint8_t slotIndex);
 void updateLcd();
 void setAvailabilityDisplayLine2();
@@ -421,7 +428,7 @@ void setDefaultConfig()
     config.telemetryIntervalMs = 500;
     config.forceGateOpen = 0;
     config.forceGateLock = 0;
-    config.autoExitOpenEnabled = 0;
+    config.autoExitOpenEnabled = 1;
     config.autoCloseAfterPassEnabled = 1;
     config.gatePassageThresholdCm = 10;
 
@@ -733,12 +740,16 @@ void setLastAccessEvent(const byte uid[UID_LENGTH], const char *result)
 // Якщо датчика немає - зараз він просто не може визначати зайнятість.
 void updateParkingStates()
 {
+    bool routeStateChanged = false;
+    bool routeShouldClear = false;
+
     if (DEMO_MODE)
     {
         for (uint8_t i = 0; i < SLOT_COUNT; i++)
         {
             if (!isSlotEnabled(i))
             {
+                routeStateChanged = routeStateChanged || slotOccupied[i];
                 slotDistanceCm[i] = -1;
                 slotOccupied[i] = false;
                 slotOccupiedSince[i] = 0;
@@ -747,19 +758,35 @@ void updateParkingStates()
 
             if (i >= 3)
             {
+                routeStateChanged = routeStateChanged || slotOccupied[i];
                 slotDistanceCm[i] = 60;
                 slotOccupied[i] = false;
                 slotOccupiedSince[i] = 0;
                 continue;
             }
 
-            slotOccupied[i] = demoSlotOccupied[i];
+            if (slotOccupied[i] != demoSlotOccupied[i])
+            {
+                routeStateChanged = true;
+                slotOccupied[i] = demoSlotOccupied[i];
+                routeShouldClear = routeShouldClear || (demoSlotOccupied[i] && i < ROUTE_LED_SLOT_COUNT && activeRouteSlot != 0);
+            }
+
             slotDistanceCm[i] = demoSlotOccupied[i] ? 8 : 60;
 
             if (!demoSlotOccupied[i])
             {
                 slotOccupiedSince[i] = 0;
             }
+        }
+
+        if (routeShouldClear)
+        {
+            clearRouteLedStrips();
+        }
+        else if (routeStateChanged)
+        {
+            refreshRouteLedStrips();
         }
 
         return;
@@ -769,6 +796,7 @@ void updateParkingStates()
     {
         if (!isSlotEnabled(i))
         {
+            routeStateChanged = routeStateChanged || slotOccupied[i];
             slotDistanceCm[i] = -1;
             slotOccupied[i] = false;
             pendingSlotOccupied[i] = false;
@@ -779,6 +807,7 @@ void updateParkingStates()
 
         if (trigPins[i] == NO_PIN || echoPins[i] == NO_PIN)
         {
+            routeStateChanged = routeStateChanged || slotOccupied[i];
             slotDistanceCm[i] = -1;
             slotOccupied[i] = false;
             pendingSlotOccupied[i] = false;
@@ -823,57 +852,104 @@ void updateParkingStates()
             slotOccupiedSince[i] = 0;
         }
 
-        slotOccupied[i] = measuredOccupied;
+        if (slotOccupied[i] != measuredOccupied)
+        {
+            routeStateChanged = true;
+            slotOccupied[i] = measuredOccupied;
+            routeShouldClear = routeShouldClear || (measuredOccupied && i < ROUTE_LED_SLOT_COUNT && activeRouteSlot != 0);
+        }
+    }
+
+    if (routeShouldClear)
+    {
+        clearRouteLedStrips();
+    }
+    else if (routeStateChanged)
+    {
+        refreshRouteLedStrips();
     }
 }
 
 void setupRouteLedStrips()
 {
-    for (uint8_t i = 0; i < ROUTE_LED_STRIP_COUNT; i++)
-    {
-        routeLedStrips[i].begin();
-        routeLedStrips[i].setBrightness(ROUTE_LED_BRIGHTNESS);
-        routeLedStrips[i].clear();
-        routeLedStrips[i].show();
-    }
+    routeLedStrip.begin();
+    routeLedStrip.setBrightness(ROUTE_LED_BRIGHTNESS);
+    routeLedStrip.clear();
+    renderDisabledRouteLeds();
+    renderActiveRouteSlotLeds();
+    routeLedStrip.show();
 }
 
 void clearRouteLedStrips()
 {
     activeRouteSlot = 0;
 
-    for (uint8_t i = 0; i < ROUTE_LED_STRIP_COUNT; i++)
+    routeLedStrip.clear();
+    renderDisabledRouteLeds();
+    renderActiveRouteSlotLeds();
+    routeLedStrip.show();
+}
+
+void refreshRouteLedStrips()
+{
+    if (activeRouteSlot >= 1 && activeRouteSlot <= ROUTE_LED_SLOT_COUNT)
     {
-        routeLedStrips[i].clear();
-        routeLedStrips[i].show();
+        showRouteToSlot(activeRouteSlot - 1);
+        return;
+    }
+
+    clearRouteLedStrips();
+}
+
+void renderDisabledRouteLeds()
+{
+    uint32_t disabledColor = routeLedStrip.Color(180, 0, 0);
+    for (uint8_t i = 0; i < DISABLED_ROUTE_LED_COUNT; i++)
+    {
+        routeLedStrip.setPixelColor(disabledRouteLedIndexes[i], disabledColor);
+    }
+}
+
+void renderActiveRouteSlotLeds()
+{
+    uint32_t freeColor = routeLedStrip.Color(255, 90, 0);
+    uint32_t occupiedColor = routeLedStrip.Color(0, 80, 200);
+    for (uint8_t slotIndex = 0; slotIndex < ROUTE_LED_SLOT_COUNT; slotIndex++)
+    {
+        renderActiveRouteSlotLed(slotIndex, slotOccupied[slotIndex] ? occupiedColor : freeColor);
+    }
+}
+
+void renderActiveRouteSlotLed(uint8_t slotIndex, uint32_t color)
+{
+    if (slotIndex < ROUTE_LED_SLOT_COUNT)
+    {
+        routeLedStrip.setPixelColor(routeLedSlotIndexes[slotIndex], color);
     }
 }
 
 void showRouteToSlot(uint8_t slotIndex)
 {
-    if (slotIndex >= ROUTE_LED_STRIP_COUNT)
+    if (slotIndex >= ROUTE_LED_SLOT_COUNT)
     {
         clearRouteLedStrips();
         return;
     }
 
     activeRouteSlot = slotIndex + 1;
-    uint32_t routeColor = routeLedStrips[slotIndex].Color(0, 180, 80);
+    uint32_t routeColor = routeLedStrip.Color(0, 180, 80);
+    uint8_t routeEndIndex = routeLedExtraEndIndexes[slotIndex];
 
-    for (uint8_t stripIndex = 0; stripIndex < ROUTE_LED_STRIP_COUNT; stripIndex++)
+    routeLedStrip.clear();
+    for (uint8_t ledIndex = ROUTE_LED_EXTRA_ROUTE_START; ledIndex <= routeEndIndex; ledIndex++)
     {
-        routeLedStrips[stripIndex].clear();
-
-        if (stripIndex == slotIndex)
-        {
-            for (uint8_t ledIndex = 0; ledIndex < ROUTE_LED_COUNT_PER_STRIP; ledIndex++)
-            {
-                routeLedStrips[stripIndex].setPixelColor(ledIndex, routeColor);
-            }
-        }
-
-        routeLedStrips[stripIndex].show();
+        routeLedStrip.setPixelColor(ledIndex, routeColor);
     }
+
+    renderDisabledRouteLeds();
+    renderActiveRouteSlotLeds();
+    renderActiveRouteSlotLed(slotIndex, routeColor);
+    routeLedStrip.show();
 }
 
 // -----------------------------------------------------------------------------
@@ -1023,11 +1099,11 @@ void sendProfile()
     beginProtocolFrame();
     if (DEMO_MODE)
     {
-        btSerial.print(F("PROFILE|board=ArduinoMega|rfid=DEMO|lcd=I2C_16X2|gate=DEMO|transport=HC06|slots=6|route_led_strips=3|front_sensor=1"));
+        btSerial.print(F("PROFILE|board=ArduinoMega|rfid=DEMO|lcd=I2C_16X2|gate=DEMO|transport=HC06|slots=6|route_led_strips=1|route_leds=15|front_sensor=1"));
     }
     else
     {
-        btSerial.print(F("PROFILE|board=ArduinoMega|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05|slots=6|route_led_strips=3|front_sensor=1"));
+        btSerial.print(F("PROFILE|board=ArduinoMega|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05|slots=6|route_led_strips=1|route_leds=15|front_sensor=1"));
     }
     endProtocolFrame();
 }
@@ -1662,7 +1738,7 @@ void handleParkingCommand(char *context)
     }
     else if (strcmp(action, "ROUTE") == 0)
     {
-        if (index >= ROUTE_LED_STRIP_COUNT)
+        if (index >= ROUTE_LED_SLOT_COUNT)
         {
             sendError(F("PARKING"), F("ROUTE_SLOT_HAS_NO_STRIP"));
             return;

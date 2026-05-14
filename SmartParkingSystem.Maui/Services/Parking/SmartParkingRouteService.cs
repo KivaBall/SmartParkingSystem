@@ -9,8 +9,14 @@ public sealed class SmartParkingRouteService : IDisposable
 {
     private const int PhysicalRouteSlotCount = 3;
     private const int NearestRouteSlotNumber = 1;
-    private const int MiddleRouteSlotNumber = 2;
-    private const int FarthestRouteSlotNumber = 3;
+    private const int MiddleRouteSlotNumber = 3;
+    private const int FarthestRouteSlotNumber = 2;
+    private static readonly IReadOnlyDictionary<int, int> PhysicalRouteSlotRanks = new Dictionary<int, int>
+    {
+        [NearestRouteSlotNumber] = 0,
+        [MiddleRouteSlotNumber] = 1,
+        [FarthestRouteSlotNumber] = 2
+    };
     private static readonly TimeSpan AssignmentWindow = TimeSpan.FromSeconds(30);
     private readonly Dictionary<int, ActiveVisit> _activeVisits = [];
 
@@ -142,7 +148,7 @@ public sealed class SmartParkingRouteService : IDisposable
 
     private void UpdateProfile(ActiveVisit visit, TimeSpan duration)
     {
-        var durationMinutes = Math.Max(1, duration.TotalMinutes);
+        var durationMinutes = Math.Max(0.01, duration.TotalMinutes);
         if (!_profiles.TryGetValue(visit.CardUid, out var current))
         {
             _profiles[visit.CardUid] = new SmartParkingCardProfile(
@@ -197,7 +203,7 @@ public sealed class SmartParkingRouteService : IDisposable
         }
 
         // TODO: Keep this hardcoded until the physical parking layout becomes configurable.
-        // Physical distance order from entrance: P1 nearest, then P2, then P3 farthest.
+        // Physical distance order from entrance: P1 nearest, then P3, then P2 farthest.
         var durationBand = ClassifyDurationBand(profile);
         return durationBand switch
         {
@@ -220,8 +226,14 @@ public sealed class SmartParkingRouteService : IDisposable
             return ParkingDurationBand.Short;
         }
 
-        var rank = GetAverageRank(knownAverages, profile.AverageParkingDurationMinutes);
-        var normalizedRank = rank / (knownAverages.Length - 1);
+        var minAverage = knownAverages[0];
+        var maxAverage = knownAverages[^1];
+        if (Math.Abs(maxAverage - minAverage) < 0.001)
+        {
+            return ParkingDurationBand.Short;
+        }
+
+        var normalizedRank = (profile.AverageParkingDurationMinutes - minAverage) / (maxAverage - minAverage);
 
         return normalizedRank switch
         {
@@ -231,40 +243,21 @@ public sealed class SmartParkingRouteService : IDisposable
         };
     }
 
-    private static double GetAverageRank(double[] sortedValues, double value)
-    {
-        var firstRank = -1;
-        var lastRank = -1;
-
-        for (var index = 0; index < sortedValues.Length; index++)
-        {
-            if (Math.Abs(sortedValues[index] - value) > double.Epsilon)
-            {
-                continue;
-            }
-
-            firstRank = firstRank == -1 ? index : firstRank;
-            lastRank = index;
-        }
-
-        if (firstRank != -1)
-        {
-            return (firstRank + lastRank) / 2d;
-        }
-
-        var insertionIndex = Array.BinarySearch(sortedValues, value);
-        return insertionIndex >= 0 ? insertionIndex : ~insertionIndex;
-    }
-
     private static ParkingSlotSnapshot PickClosestTo(
         IEnumerable<RouteSlotCandidate> candidates,
         int targetSlotNumber)
     {
+        var targetRank = GetPhysicalRouteRank(targetSlotNumber);
         return candidates
-            .OrderBy(item => Math.Abs(item.Number.GetValueOrDefault() - targetSlotNumber))
+            .OrderBy(item => Math.Abs(GetPhysicalRouteRank(item.Number.GetValueOrDefault()) - targetRank))
             .ThenBy(item => item.Number)
             .First()
             .Slot;
+    }
+
+    private static int GetPhysicalRouteRank(int slotNumber)
+    {
+        return PhysicalRouteSlotRanks.GetValueOrDefault(slotNumber, slotNumber);
     }
 
     private static int? ParseSlotNumber(string slotId)

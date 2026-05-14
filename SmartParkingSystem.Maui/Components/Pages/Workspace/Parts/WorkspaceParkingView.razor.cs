@@ -86,7 +86,8 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
 
     protected bool CanShowRouteToSelectedSlot =>
         !IsBusy && SelectedSlot is not null && TryParseSlotNumber(SelectedSlot.Id, out var slotNumber) &&
-        slotNumber <= 3;
+        slotNumber <= 3 &&
+        SelectedSlot.State == ParkingSlotState.Free;
 
     protected string FloorLayerStyle => IsFloorContentVisible ? "opacity: 1;" : "opacity: 0;";
     protected string FloorControlsStyle => FloorModeEnabled ? string.Empty : "display: none;";
