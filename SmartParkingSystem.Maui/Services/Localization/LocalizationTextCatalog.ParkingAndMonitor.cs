@@ -14,7 +14,16 @@ internal static partial class LocalizationTextCatalog
         "No active occupation time",
         "Disabled",
         "Enable slot",
-        "Disable slot");
+        "Disable slot",
+        "Fullscreen",
+        "Exit fullscreen",
+        "Free spots",
+        "Occupied spots",
+        "RFID card",
+        "Vehicle number",
+        "Vehicle description",
+        "Entry photo",
+        "Undefined");
 
     private static readonly ParkingTexts UkrainianParkingTexts = new ParkingTexts(
         "Карта паркінгу",
@@ -26,7 +35,16 @@ internal static partial class LocalizationTextCatalog
         "Немає",
         "Вимкнено",
         "Увімкнути місце",
-        "Вимкнути місце");
+        "Вимкнути місце",
+        "На весь екран",
+        "Вийти з повного екрану",
+        "Вільних місць",
+        "Зайнятих місць",
+        "RFID картка",
+        "Номер машини",
+        "Опис машини",
+        "Знімок при в'їзді",
+        "Невизначено");
 
     private static readonly MonitorTexts EnglishMonitorTexts = new MonitorTexts(
         "Monitor",

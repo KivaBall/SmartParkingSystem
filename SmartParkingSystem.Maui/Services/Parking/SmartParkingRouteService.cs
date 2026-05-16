@@ -1,11 +1,13 @@
+using SmartParkingSystem.Domain.Models.Camera;
 using SmartParkingSystem.Domain.Models.DeviceConnection;
 using SmartParkingSystem.Domain.Models.Parking;
 using SmartParkingSystem.Maui.Services.AppMemory;
+using SmartParkingSystem.Maui.Services.Camera;
 using SmartParkingSystem.Maui.Services.DeviceConnection.Session;
 
 namespace SmartParkingSystem.Maui.Services.Parking;
 
-public sealed class SmartParkingRouteService : IDisposable
+public sealed class SmartParkingRouteService : ISmartParkingRouteService, IDisposable
 {
     private const int PhysicalRouteSlotCount = 3;
     private const int NearestRouteSlotNumber = 1;
@@ -18,8 +20,10 @@ public sealed class SmartParkingRouteService : IDisposable
         [FarthestRouteSlotNumber] = 2
     };
     private static readonly TimeSpan AssignmentWindow = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan EntrySnapshotLookbackWindow = TimeSpan.FromSeconds(1);
     private readonly Dictionary<int, ActiveVisit> _activeVisits = [];
 
+    private readonly ICameraSnapshotService _cameraSnapshotService;
     private readonly IAppMemoryStore _memoryStore;
     private readonly IParkingService _parkingService;
     private readonly Dictionary<string, SmartParkingCardProfile> _profiles;
@@ -32,11 +36,13 @@ public sealed class SmartParkingRouteService : IDisposable
     public SmartParkingRouteService(
         IDeviceSessionService sessionService,
         IParkingService parkingService,
-        IAppMemoryStore memoryStore)
+        IAppMemoryStore memoryStore,
+        ICameraSnapshotService cameraSnapshotService)
     {
         _sessionService = sessionService;
         _parkingService = parkingService;
         _memoryStore = memoryStore;
+        _cameraSnapshotService = cameraSnapshotService;
         _profiles = memoryStore.GetSmartParkingCardProfiles()
             .ToDictionary(profile => profile.CardUid, StringComparer.OrdinalIgnoreCase);
         _previousSession = sessionService.CurrentSession;
@@ -47,6 +53,25 @@ public sealed class SmartParkingRouteService : IDisposable
     public void Dispose()
     {
         _sessionService.SessionChanged -= OnSessionChanged;
+    }
+
+    public SlotOccupant? GetSlotOccupant(int slotNumber)
+    {
+        lock (_sync)
+        {
+            if (!_activeVisits.TryGetValue(slotNumber, out var visit))
+            {
+                return null;
+            }
+
+            _profiles.TryGetValue(visit.CardUid, out var profile);
+            return new SlotOccupant(
+                visit.CardUid,
+                profile?.VehicleNumber,
+                profile?.VehicleDescription,
+                visit.StartedAt,
+                visit.EntrySnapshot?.ImageSource);
+        }
     }
 
     private void OnSessionChanged(DeviceControllerSession? session)
@@ -114,7 +139,8 @@ public sealed class SmartParkingRouteService : IDisposable
             _activeVisits[currentSlot.SlotNumber] = new ActiveVisit(
                 _pendingAccess.CardUid,
                 $"P{currentSlot.SlotNumber}",
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UtcNow,
+                FindEntrySnapshot(_pendingAccess.CreatedAt));
             _pendingAccess = null;
             return;
         }
@@ -267,9 +293,34 @@ public sealed class SmartParkingRouteService : IDisposable
             : null;
     }
 
+    private CameraSnapshot? FindEntrySnapshot(DateTimeOffset accessCreatedAt)
+    {
+        try
+        {
+            // Camera captures only AFTER gate opens, which always follows the ALLOWED scan.
+            // Allow a small clock-skew tolerance, but pick the EARLIEST snapshot since the access
+            // (that's the one captured for THIS card, not a later one from another scan).
+            var earliest = accessCreatedAt - EntrySnapshotLookbackWindow;
+            var latest = accessCreatedAt + AssignmentWindow;
+            return _cameraSnapshotService.GetSnapshots()
+                .Where(snapshot => snapshot.CreatedAtUtc >= earliest && snapshot.CreatedAtUtc <= latest)
+                .OrderBy(snapshot => snapshot.CreatedAtUtc)
+                .FirstOrDefault();
+        }
+        catch
+        {
+            // Snapshot lookup is opportunistic; entry image is best-effort.
+            return null;
+        }
+    }
+
     private sealed record PendingAccess(string CardUid, DateTimeOffset CreatedAt);
 
-    private sealed record ActiveVisit(string CardUid, string SlotId, DateTimeOffset StartedAt);
+    private sealed record ActiveVisit(
+        string CardUid,
+        string SlotId,
+        DateTimeOffset StartedAt,
+        CameraSnapshot? EntrySnapshot);
 
     private sealed record RouteSlotCandidate(ParkingSlotSnapshot Slot, int? Number);
 

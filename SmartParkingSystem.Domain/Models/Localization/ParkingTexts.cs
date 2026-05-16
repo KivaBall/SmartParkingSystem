@@ -10,4 +10,13 @@ public sealed record ParkingTexts(
     string NoOccupiedDurationLabel,
     string DisabledDurationLabel,
     string EnableSlotButton,
-    string DisableSlotButton);
+    string DisableSlotButton,
+    string FullscreenButtonLabel,
+    string ExitFullscreenButtonLabel,
+    string FreeCountTitle,
+    string OccupiedCountTitle,
+    string RfidCardLabel,
+    string VehicleNumberLabel,
+    string VehicleDescriptionLabel,
+    string EntrySnapshotLabel,
+    string UndefinedValueLabel);
