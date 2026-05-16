@@ -1,13 +1,21 @@
-#include <EEPROM.h>
 #include <Adafruit_NeoPixel.h>
-#include <MFRC522.h>
-#include <Servo.h>
-#include <SPI.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
+#define ENABLE_RFID 0
+#define ENABLE_SERVO 0
+
 #include <LiquidCrystal_I2C.h>
+
+#if ENABLE_RFID
+#include <MFRC522.h>
+#include <SPI.h>
+#endif
+
+#if ENABLE_SERVO
+#include <Servo.h>
+#endif
 
 // -----------------------------------------------------------------------------
 // Smart Parking System Controller
@@ -19,7 +27,7 @@
 // 2. Керує воротами через сервопривід.
 // 3. Читає стан паркомісць через ультразвукові датчики.
 // 4. Показує короткий стан на LCD 16x2.
-// 5. Спілкується із застосунком через Bluetooth-модуль HC-05 і паралельно через USB-CDC.
+// 5. Спілкується із застосунком напряму через USB Serial (без Bluetooth).
 // 6. Зберігає редаговані параметри в EEPROM, щоб вони не губилися після перезапуску.
 //
 // Важлива ідея:
@@ -32,132 +40,17 @@
 // - редагувати списки RFID-карток
 //
 // Зауваження по фізичному залізу:
-// - Логічних слотів у системі 6.
+// - Логічних слотів у системі 10.
 // - Фізично датчики зараз підключені тільки для перших 3 слотів.
 // - Для слотів 4-10 прошивка зараз тримає "логічне" місце без датчика.
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-// Канал зв'язку із застосунком (Bluetooth + USB одночасно)
+// USB Serial
 // -----------------------------------------------------------------------------
-// Контролер слухає одразу два транспорти:
-//   - HC-05 на апаратному Serial1 (Bluetooth, як і раніше).
-//   - USB-CDC на Serial (коли Mega підключена кабелем у комп'ютер).
-//
-// LinkStream фанаутить виклики:
-//   - available() / read() / peek() — забирає байти з того порту, де вони є,
-//     тримається одного порту до '\n', щоб не змішати команди двох клієнтів.
-//   - write() — після першого прийнятого байта відповідає в той самий порт,
-//     з якого прийшла команда. До першої команди стартові повідомлення йдуть
-//     в обидва порти.
-//
-// Розподіл пінів HC-05 на Mega:
-//   HC-05 TXD -> Mega D19 RX1
-//   HC-05 RXD -> Mega D18 TX1   (дільник напруги бажаний).
-//
-// Якщо USB-CDC не використовується — нічого міняти не треба, Serial просто
-// сидить у бекграунді і не заважає протоколу.
-class LinkStream : public Stream
-{
-public:
-    LinkStream(Stream &primary, Stream &secondary)
-        : _primary(primary), _secondary(secondary), _stickySource(nullptr), _replySource(nullptr)
-    {
-    }
-
-    int available() override
-    {
-        return _primary.available() + _secondary.available();
-    }
-
-    int read() override
-    {
-        Stream *source = pickReadSource();
-        if (source == nullptr)
-        {
-            return -1;
-        }
-
-        _replySource = source;
-        int value = source->read();
-        if (value == '\n' || value == -1)
-        {
-            // Кінець рядка або вичерпано — наступний read() може взяти інший канал.
-            _stickySource = nullptr;
-        }
-        return value;
-    }
-
-    int peek() override
-    {
-        Stream *source = pickReadSource();
-        return source == nullptr ? -1 : source->peek();
-    }
-
-    void flush() override
-    {
-        _primary.flush();
-        _secondary.flush();
-    }
-
-    size_t write(uint8_t value) override
-    {
-        if (_replySource != nullptr)
-        {
-            return _replySource->write(value);
-        }
-
-        size_t a = _primary.write(value);
-        size_t b = _secondary.write(value);
-        return a > b ? a : b;
-    }
-
-    size_t write(const uint8_t *buffer, size_t size) override
-    {
-        if (_replySource != nullptr)
-        {
-            return _replySource->write(buffer, size);
-        }
-
-        size_t a = _primary.write(buffer, size);
-        size_t b = _secondary.write(buffer, size);
-        return a > b ? a : b;
-    }
-
-private:
-    Stream *pickReadSource()
-    {
-        if (_stickySource != nullptr && _stickySource->available() > 0)
-        {
-            return _stickySource;
-        }
-
-        if (_primary.available() > 0)
-        {
-            _stickySource = &_primary;
-            return _stickySource;
-        }
-
-        if (_secondary.available() > 0)
-        {
-            _stickySource = &_secondary;
-            return _stickySource;
-        }
-
-        _stickySource = nullptr;
-        return nullptr;
-    }
-
-    Stream &_primary;
-    Stream &_secondary;
-    Stream *_stickySource;
-    Stream *_replySource;
-};
-
-// USB-CDC має пріоритет, бо в дев-сценарії застосунок частіше підключається
-// саме кабелем; на роботу через HC-05 це жодного впливу не має.
-LinkStream linkSerial(Serial, Serial1);
-#define btSerial linkSerial
+// Цей демо-варіант працює напряму через апаратний USB-CDC (Serial), без HC-05/HC-06.
+// Зручно для перевірки протоколу через дротове підключення (Serial Monitor / MAUI USB).
+#define btSerial Serial
 
 // -----------------------------------------------------------------------------
 // RFID
@@ -165,7 +58,9 @@ LinkStream linkSerial(Serial, Serial1);
 // SS і RST для модуля MFRC522.
 constexpr uint8_t SS_PIN = 10;
 constexpr uint8_t RST_PIN = 9;
+#if ENABLE_RFID
 MFRC522 rfid(SS_PIN, RST_PIN);
+#endif
 
 // -----------------------------------------------------------------------------
 // LCD 16x2 по I2C
@@ -175,7 +70,9 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 // -----------------------------------------------------------------------------
 // Servo воріт
 // -----------------------------------------------------------------------------
+#if ENABLE_SERVO
 Servo gateServo;
+#endif
 
 // -----------------------------------------------------------------------------
 // Базові системні константи
@@ -191,11 +88,17 @@ constexpr long BT_BAUD_RATE = 9600;
 constexpr uint16_t CONFIG_SIGNATURE = 0x5350;
 constexpr uint8_t CONFIG_VERSION = 8;
 constexpr unsigned long LCD_MESSAGE_DURATION_MS = 3000UL;
-constexpr uint16_t EEPROM_ADDRESS = 0;
 constexpr size_t RX_BUFFER_SIZE = 80;
 constexpr uint16_t DEFAULT_SLOT_ENABLED_MASK = 0x0007;
 constexpr char PROTOCOL_FRAME_MARKER[] = "|||";
 constexpr uint8_t PROTOCOL_FRAME_MARKER_LENGTH = 3;
+constexpr bool DEMO_MODE = true;
+constexpr unsigned long DEMO_CARD_EVENT_MIN_MS = 20000UL;
+constexpr unsigned long DEMO_CARD_EVENT_MAX_MS = 30000UL;
+constexpr unsigned long DEMO_SLOT_MIN_MS = 5000UL;
+constexpr unsigned long DEMO_SLOT_MAX_MS = 15000UL;
+constexpr unsigned long DEMO_GATE_PASSAGE_OCCUPIED_AFTER_OPEN_MS = 900UL;
+constexpr unsigned long DEMO_GATE_PASSAGE_FREE_AFTER_OPEN_MS = 1800UL;
 constexpr unsigned long GATE_PASSAGE_AUTO_EXIT_COOLDOWN_MS = 3000UL;
 constexpr uint8_t GATE_PASSAGE_STABILITY_READS = 2;
 constexpr uint8_t SLOT_STABILITY_READS = 2;
@@ -333,6 +236,11 @@ uint8_t activeRouteSlot = 0;
 char lastAccessUid[UID_LENGTH * 2 + 1] = "";
 char lastAccessResult[9] = "";
 uint16_t lastAccessCounter = 0;
+bool demoSlotOccupied[SLOT_COUNT] = {false};
+unsigned long demoSlotNextToggleAt[3] = {0};
+unsigned long demoNextCardAt = 0;
+bool demoGatePassageCycleActive = false;
+unsigned long demoGatePassageCycleStartedAt = 0;
 
 // -----------------------------------------------------------------------------
 // Буфер прийому Bluetooth-команд
@@ -408,6 +316,11 @@ void startTemporaryGateOpen(bool armAutoClose);
 void resetGatePassageAutomation();
 void setLastAccessEvent(const byte uid[UID_LENGTH], const char *result);
 void trimLine(char *line);
+void updateDemoMode();
+void updateDemoGatePassageCycle();
+void startDemoGatePassageCycle();
+void triggerDemoCardEvent();
+unsigned long nextDemoDelay(unsigned long minValue, unsigned long maxValue);
 bool isSlotEnabled(uint8_t slotIndex);
 void setSlotEnabled(uint8_t slotIndex, bool isEnabled);
 
@@ -417,56 +330,49 @@ void setSlotEnabled(uint8_t slotIndex, bool isEnabled);
 // Виконується один раз при старті контролера.
 void setup()
 {
-    // Serial — це і дебаг через Arduino IDE, і повноцінний канал для застосунку
-    // через USB-CDC (коли Mega підключена кабелем). LinkStream фанаутить його
-    // разом із HC-05.
-    Serial.begin(BT_BAUD_RATE);
+    // Bluetooth-канал для зв'язку із застосунком.
+    btSerial.begin(BT_BAUD_RATE);
+    randomSeed(millis());
 
-    // Bluetooth-канал HC-05 на апаратному Serial1.
-    Serial1.begin(BT_BAUD_RATE);
-
-    // Ініціалізація SPI та RFID.
-    SPI.begin();
-    rfid.PCD_Init();
-
-    // Ініціалізація LCD.
-    lcd.init();
-    lcd.backlight();
-
-    // Підключення сервоприводу воріт.
-    gateServo.attach(SERVO_PIN);
-
-    // Налаштовуємо пін-и тільки там, де датчики реально є.
-    for (uint8_t i = 0; i < SLOT_COUNT; i++)
+    if (!DEMO_MODE)
     {
-        if (trigPins[i] != NO_PIN && echoPins[i] != NO_PIN)
+        // У звичайній прошивці тут піднімається реальне залізо.
+#if ENABLE_RFID
+        SPI.begin();
+        rfid.PCD_Init();
+#endif
+
+        lcd.init();
+        lcd.backlight();
+
+#if ENABLE_SERVO
+        gateServo.attach(SERVO_PIN);
+#endif
+
+        for (uint8_t i = 0; i < SLOT_COUNT; i++)
         {
-            pinMode(trigPins[i], OUTPUT);
-            pinMode(echoPins[i], INPUT);
+            if (trigPins[i] != NO_PIN && echoPins[i] != NO_PIN)
+            {
+                pinMode(trigPins[i], OUTPUT);
+                pinMode(echoPins[i], INPUT);
+            }
         }
+
+        pinMode(GATE_PASSAGE_TRIG_PIN, OUTPUT);
+        pinMode(GATE_PASSAGE_ECHO_PIN, INPUT);
+        pinMode(FRONT_ACCESS_TRIG_PIN, OUTPUT);
+        pinMode(FRONT_ACCESS_ECHO_PIN, INPUT);
     }
 
-    pinMode(GATE_PASSAGE_TRIG_PIN, OUTPUT);
-    pinMode(GATE_PASSAGE_ECHO_PIN, INPUT);
-    pinMode(FRONT_ACCESS_TRIG_PIN, OUTPUT);
-    pinMode(FRONT_ACCESS_ECHO_PIN, INPUT);
     setupRouteLedStrips();
 
-    // Читаємо конфігурацію з EEPROM.
-    // Якщо вона невалідна - ставимо дефолтну.
     loadConfig();
-
-    // Приводимо фізичний стан воріт і логічний стан слотів до конфігу.
     updateFrontAccessSensorState();
     updateGatePassageState();
     updateGateMode();
     updateParkingStates();
     updateDisplayState();
-
-    // Початкове повідомлення локально на LCD.
     showMessage("Smart Parking", "Controller Ready");
-
-    // Початковий handshake-пакет для застосунку.
     sendHello();
 }
 
@@ -479,21 +385,21 @@ void loop()
     // Приймаємо та виконуємо команди з Bluetooth.
     handleBluetoothInput();
 
-    // Реагуємо на RFID-картки.
-    handleRfid();
+    if (DEMO_MODE)
+    {
+        updateDemoMode();
+    }
+    else
+    {
+        handleRfid();
+    }
 
     updateFrontAccessSensorState();
     updateGatePassageState();
     updateGatePassageAutomation();
-
-    // Оновлюємо логіку воріт.
     updateGateMode();
-
-    // Оновлюємо стани парковок.
     updateParkingStates();
     updateDisplayState();
-
-    // Оновлюємо екран.
     updateLcd();
 
     // Періодично відправляємо телеметрію в застосунок.
@@ -556,13 +462,7 @@ void setDefaultConfig()
 // Якщо підпис або версія не збігаються - відновлює дефолт і одразу зберігає.
 void loadConfig()
 {
-    EEPROM.get(EEPROM_ADDRESS, config);
-
-    if (config.signature != CONFIG_SIGNATURE || config.version != CONFIG_VERSION)
-    {
-        setDefaultConfig();
-        saveConfig();
-    }
+    setDefaultConfig();
 }
 
 // -----------------------------------------------------------------------------
@@ -573,7 +473,6 @@ void saveConfig()
 {
     config.signature = CONFIG_SIGNATURE;
     config.version = CONFIG_VERSION;
-    EEPROM.put(EEPROM_ADDRESS, config);
 }
 
 void setDisplayText(char target[DISPLAY_TEXT_LENGTH + 1], const char *value)
@@ -669,7 +568,7 @@ void updateGateMode()
         gateMode = GATE_CLOSED;
     }
 
-    if (previousMode != gateMode)
+    if (previousMode != gateMode && !DEMO_MODE)
     {
         applyGateOutput();
     }
@@ -681,6 +580,9 @@ void updateGateMode()
 // Фізично переводить ворота у відкрите або закрите положення.
 void applyGateOutput()
 {
+#if !ENABLE_SERVO
+    return;
+#else
     if (gateMode == GATE_TEMPORARY_OPEN || gateMode == GATE_FORCED_OPEN)
     {
         gateServo.write(config.servoOpenAngle);
@@ -689,13 +591,14 @@ void applyGateOutput()
     {
         gateServo.write(config.servoClosedAngle);
     }
+#endif
 }
 
 void updateFrontAccessSensorState()
 {
     previousFrontAccessOccupied = frontAccessOccupied;
 
-    long distance = readDistanceCm(FRONT_ACCESS_TRIG_PIN, FRONT_ACCESS_ECHO_PIN);
+    long distance = DEMO_MODE ? frontAccessDistanceCm : readDistanceCm(FRONT_ACCESS_TRIG_PIN, FRONT_ACCESS_ECHO_PIN);
     frontAccessDistanceCm = distance;
     bool measuredOccupied = distance != -1 && distance < config.gatePassageThresholdCm;
 
@@ -727,7 +630,7 @@ void updateGatePassageState()
 {
     previousGatePassageOccupied = gatePassageOccupied;
 
-    long distance = readDistanceCm(GATE_PASSAGE_TRIG_PIN, GATE_PASSAGE_ECHO_PIN);
+    long distance = DEMO_MODE ? gatePassageDistanceCm : readDistanceCm(GATE_PASSAGE_TRIG_PIN, GATE_PASSAGE_ECHO_PIN);
     gatePassageDistanceCm = distance;
     bool measuredOccupied = distance != -1 && distance < config.gatePassageThresholdCm;
 
@@ -797,12 +700,22 @@ void startTemporaryGateOpen(bool armAutoClose)
     temporaryGateExpiresAt = millis() + config.servoOpenDurationMs;
     gatePassageAutoCloseArmed = armAutoClose && config.autoCloseAfterPassEnabled;
     gatePassageVehicleSeen = gatePassageAutoCloseArmed && gatePassageOccupied;
+
+    if (DEMO_MODE && gatePassageAutoCloseArmed)
+    {
+        startDemoGatePassageCycle();
+    }
 }
 
 void resetGatePassageAutomation()
 {
     gatePassageAutoCloseArmed = false;
     gatePassageVehicleSeen = false;
+
+    if (DEMO_MODE)
+    {
+        demoGatePassageCycleActive = false;
+    }
 }
 
 void setLastAccessEvent(const byte uid[UID_LENGTH], const char *result)
@@ -828,6 +741,55 @@ void updateParkingStates()
 {
     bool routeStateChanged = false;
     bool routeShouldClear = false;
+
+    if (DEMO_MODE)
+    {
+        for (uint8_t i = 0; i < SLOT_COUNT; i++)
+        {
+            if (!isSlotEnabled(i))
+            {
+                routeStateChanged = routeStateChanged || slotOccupied[i];
+                slotDistanceCm[i] = -1;
+                slotOccupied[i] = false;
+                slotOccupiedSince[i] = 0;
+                continue;
+            }
+
+            if (i >= 3)
+            {
+                routeStateChanged = routeStateChanged || slotOccupied[i];
+                slotDistanceCm[i] = 60;
+                slotOccupied[i] = false;
+                slotOccupiedSince[i] = 0;
+                continue;
+            }
+
+            if (slotOccupied[i] != demoSlotOccupied[i])
+            {
+                routeStateChanged = true;
+                slotOccupied[i] = demoSlotOccupied[i];
+                routeShouldClear = routeShouldClear || (demoSlotOccupied[i] && i < ROUTE_LED_SLOT_COUNT && activeRouteSlot != 0);
+            }
+
+            slotDistanceCm[i] = demoSlotOccupied[i] ? 8 : 60;
+
+            if (!demoSlotOccupied[i])
+            {
+                slotOccupiedSince[i] = 0;
+            }
+        }
+
+        if (routeShouldClear)
+        {
+            clearRouteLedStrips();
+        }
+        else if (routeStateChanged)
+        {
+            refreshRouteLedStrips();
+        }
+
+        return;
+    }
 
     for (uint8_t i = 0; i < SLOT_COUNT; i++)
     {
@@ -1016,6 +978,11 @@ void updateLcd()
         setAvailabilityDisplayLine2();
     }
 
+    if (DEMO_MODE)
+    {
+        return;
+    }
+
     lcd.setCursor(0, 0);
     lcd.print("                ");
     lcd.setCursor(0, 0);
@@ -1111,9 +1078,18 @@ void sendError(const char *scope, const char *message)
 void sendHello()
 {
     beginProtocolFrame();
-    btSerial.print(F("HELLO_OK|device=SMART_PARKING|fw=2|slots="));
-    btSerial.print(SLOT_COUNT);
-    btSerial.print(F("|transport=HC05+USB"));
+    if (DEMO_MODE)
+    {
+        btSerial.print(F("HELLO_OK|device=SMART_PARKING|fw=2|slots="));
+        btSerial.print(SLOT_COUNT);
+        btSerial.print(F("|transport=HC06"));
+    }
+    else
+    {
+        btSerial.print(F("HELLO_OK|device=SMART_PARKING|fw=2|slots="));
+        btSerial.print(SLOT_COUNT);
+        btSerial.print(F("|transport=HC05"));
+    }
     endProtocolFrame();
 }
 
@@ -1124,9 +1100,18 @@ void sendHello()
 void sendProfile()
 {
     beginProtocolFrame();
-    btSerial.print(F("PROFILE|board=ArduinoMega|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05+USB|slots="));
-    btSerial.print(SLOT_COUNT);
-    btSerial.print(F("|route_led_strips=1|route_leds=15|front_sensor=1"));
+    if (DEMO_MODE)
+    {
+        btSerial.print(F("PROFILE|board=ArduinoMega|rfid=DEMO|lcd=I2C_16X2|gate=DEMO|transport=HC06|slots="));
+        btSerial.print(SLOT_COUNT);
+        btSerial.print(F("|route_led_strips=1|route_leds=15|front_sensor=1"));
+    }
+    else
+    {
+        btSerial.print(F("PROFILE|board=ArduinoMega|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05|slots="));
+        btSerial.print(SLOT_COUNT);
+        btSerial.print(F("|route_led_strips=1|route_leds=15|front_sensor=1"));
+    }
     endProtocolFrame();
 }
 
@@ -1358,9 +1343,8 @@ bool unwrapProtocolFrame(char *line)
 // -----------------------------------------------------------------------------
 // handleBluetoothInput
 // -----------------------------------------------------------------------------
-// Приймає символи з активного каналу зв'язку (HC-05 або USB-CDC) і збирає з них
-// рядкові команди. Команда вважається завершеною по '\n'.
-// Назву функції збережено історично — фактично вона працює з LinkStream.
+// Приймає символи з Bluetooth і збирає з них рядкові команди.
+// Команда вважається завершеною по '\n'.
 void handleBluetoothInput()
 {
     while (btSerial.available() > 0)
@@ -1394,7 +1378,7 @@ void handleBluetoothInput()
         {
             // Якщо команда надто довга - очищаємо буфер і повідомляємо про помилку.
             rxIndex = 0;
-        sendError(F("RX"), F("BUFFER_OVERFLOW"));
+            sendError(F("RX"), F("BUFFER_OVERFLOW"));
         }
     }
 }
@@ -2000,6 +1984,130 @@ void handleDisplayCommand(char *context)
 }
 
 // -----------------------------------------------------------------------------
+// updateDemoMode
+// -----------------------------------------------------------------------------
+// Імітує demo-події без реального заліза:
+// - раз на 20-30 секунд відбувається "дозволена картка"
+// - на перших трьох місцях машини то з'являються, то зникають
+void updateDemoMode()
+{
+    if (!DEMO_MODE)
+    {
+        return;
+    }
+
+    updateDemoGatePassageCycle();
+
+    if (demoNextCardAt == 0)
+    {
+        demoNextCardAt = millis() + nextDemoDelay(DEMO_CARD_EVENT_MIN_MS, DEMO_CARD_EVENT_MAX_MS);
+    }
+
+    if (millis() >= demoNextCardAt)
+    {
+        triggerDemoCardEvent();
+        demoNextCardAt = millis() + nextDemoDelay(DEMO_CARD_EVENT_MIN_MS, DEMO_CARD_EVENT_MAX_MS);
+    }
+
+    for (uint8_t i = 0; i < 3; i++)
+    {
+        if (!isSlotEnabled(i))
+        {
+            demoSlotOccupied[i] = false;
+            demoSlotNextToggleAt[i] = millis() + nextDemoDelay(DEMO_SLOT_MIN_MS, DEMO_SLOT_MAX_MS);
+            continue;
+        }
+
+        if (demoSlotNextToggleAt[i] == 0)
+        {
+            demoSlotNextToggleAt[i] = millis() + nextDemoDelay(DEMO_SLOT_MIN_MS, DEMO_SLOT_MAX_MS);
+        }
+
+        if (millis() >= demoSlotNextToggleAt[i])
+        {
+            demoSlotOccupied[i] = !demoSlotOccupied[i];
+            if (demoSlotOccupied[i])
+            {
+                slotOccupiedSince[i] = millis();
+            }
+            else
+            {
+                slotOccupiedSince[i] = 0;
+            }
+
+            demoSlotNextToggleAt[i] = millis() + nextDemoDelay(DEMO_SLOT_MIN_MS, DEMO_SLOT_MAX_MS);
+        }
+    }
+}
+
+void updateDemoGatePassageCycle()
+{
+    if (!demoGatePassageCycleActive)
+    {
+        gatePassageDistanceCm = 60;
+        return;
+    }
+
+    unsigned long elapsed = millis() - demoGatePassageCycleStartedAt;
+    if (elapsed >= DEMO_GATE_PASSAGE_FREE_AFTER_OPEN_MS)
+    {
+        gatePassageDistanceCm = 60;
+        demoGatePassageCycleActive = false;
+        return;
+    }
+
+    gatePassageDistanceCm = elapsed >= DEMO_GATE_PASSAGE_OCCUPIED_AFTER_OPEN_MS ? 10 : 60;
+}
+
+void startDemoGatePassageCycle()
+{
+    if (!DEMO_MODE || !config.autoCloseAfterPassEnabled)
+    {
+        return;
+    }
+
+    demoGatePassageCycleActive = true;
+    demoGatePassageCycleStartedAt = millis();
+    gatePassageDistanceCm = 60;
+    gatePassageOccupied = false;
+    previousGatePassageOccupied = false;
+    pendingGatePassageOccupied = false;
+    gatePassageVehicleSeen = false;
+    gatePassageStableReads = GATE_PASSAGE_STABILITY_READS;
+}
+
+// -----------------------------------------------------------------------------
+// triggerDemoCardEvent
+// -----------------------------------------------------------------------------
+// Штучно відкриває ворота так, ніби була проведена дозволена картка.
+void triggerDemoCardEvent()
+{
+    byte demoUid[UID_LENGTH] = {0x42, 0xA0, 0x74, 0x06};
+
+    if (config.forceGateLock)
+    {
+        setTransientDisplayText(config.displayLockedText);
+        setLastAccessEvent(demoUid, "LOCKED");
+        beginProtocolFrame();
+        btSerial.print(F("LOCKED|uid=42A07406"));
+        endProtocolFrame();
+        return;
+    }
+
+    if (!config.forceGateOpen)
+    {
+        startTemporaryGateOpen(true);
+    }
+
+    updateGateMode();
+    setTransientDisplayText(config.displayAllowedText);
+    setLastAccessEvent(demoUid, "ALLOWED");
+    beginProtocolFrame();
+    btSerial.print(F("ALLOWED|uid=42A07406"));
+    endProtocolFrame();
+}
+
+// -----------------------------------------------------------------------------
 // handleRfid
 // -----------------------------------------------------------------------------
 // Обробляє піднесення RFID-картки.
@@ -2009,6 +2117,9 @@ void handleDisplayCommand(char *context)
 // - якщо картка невідома, теж відмовляємо
 void handleRfid()
 {
+#if !ENABLE_RFID
+    return;
+#else
     if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial())
     {
         return;
@@ -2064,6 +2175,7 @@ void handleRfid()
 
     rfid.PICC_HaltA();
     rfid.PCD_StopCrypto1();
+#endif
 }
 
 // -----------------------------------------------------------------------------
@@ -2257,6 +2369,20 @@ long readDistanceCm(uint8_t trigPin, uint8_t echoPin)
     }
 
     return distance;
+}
+
+// -----------------------------------------------------------------------------
+// nextDemoDelay
+// -----------------------------------------------------------------------------
+// Дає псевдовипадковий інтервал між demo-подіями.
+unsigned long nextDemoDelay(unsigned long minValue, unsigned long maxValue)
+{
+    if (maxValue <= minValue)
+    {
+        return minValue;
+    }
+
+    return minValue + static_cast<unsigned long>(random(static_cast<long>(maxValue - minValue + 1)));
 }
 
 // -----------------------------------------------------------------------------

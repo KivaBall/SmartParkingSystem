@@ -73,8 +73,7 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
 
     protected IReadOnlyList<ParkingSlotSnapshot> VisibleSlots =>
     [
-        .. Slots.Where(slot => (!FloorModeEnabled || slot.Floor == ActiveFloor) &&
-                               (EditParkingEnabled || slot.State != ParkingSlotState.Disabled))
+        .. Slots.Where(slot => !FloorModeEnabled || slot.Floor == ActiveFloor)
     ];
 
     protected ParkingSlotSnapshot? SelectedSlot => Slots.FirstOrDefault(slot => slot.Id == SelectedSlotId);
@@ -129,12 +128,12 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
         ParkingSlotState.Occupied =>
             "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-brand-300 text-white",
         ParkingSlotState.Disabled =>
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-warm-100 text-calm-900",
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-red-400 text-white",
         _ => "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-white/85 text-calm-900"
     };
 
     protected static string MarkerSizeStyle => "width: 100%; aspect-ratio: 1 / 1;";
-    protected static string MarkerLabelStyle => "font-size: 0.75rem; font-size: 32cqw; line-height: 1;";
+    protected static string MarkerLabelStyle => "font-size: 0.65rem; font-size: 26cqw; line-height: 1;";
 
     protected string SelectedSlotIcon => SelectedSlot?.State == ParkingSlotState.Free
         ? "square-parking"
@@ -144,7 +143,7 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
     {
         ParkingSlotState.Free => "bg-mint-300 text-calm-900",
         ParkingSlotState.Occupied => "bg-brand-300 text-white",
-        ParkingSlotState.Disabled => "bg-warm-100 text-calm-900",
+        ParkingSlotState.Disabled => "bg-red-400 text-white",
         _ => "bg-white/85 text-calm-900"
     };
 
@@ -355,7 +354,7 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
         {
             ParkingSlotState.Free => "bg-mint-300 text-calm-900 hover:bg-mint-200",
             ParkingSlotState.Occupied => "bg-brand-300 text-white hover:bg-brand-200",
-            ParkingSlotState.Disabled => "bg-warm-100 text-calm-900 hover:bg-warm-200",
+            ParkingSlotState.Disabled => "bg-red-400 text-white hover:bg-red-500",
             _ => "bg-white/85 text-calm-900"
         };
 
@@ -376,7 +375,7 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
         var draft = DraftPositions.GetValueOrDefault(slot.Id) ??
                     BuildInitialDraft(slot.Id);
         return $"container-type: inline-size; position: absolute; left: {draft.LeftPercent:F1}%; top: {draft.TopPercent
-            :F1}%; width: 8%; transform: translate(-50%, -50%);";
+            :F1}%; width: 6.5%; transform: translate(-50%, -50%);";
     }
 
     private async Task RefreshSlotsAsync()

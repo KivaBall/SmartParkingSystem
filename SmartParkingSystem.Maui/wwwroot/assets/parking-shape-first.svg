@@ -1,3 +1,13 @@
-<svg width="429" height="273" viewBox="0 0 429 273" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M181.5 58.6062H0.5V221.606H181.5L364.5 271.606L428 128.788L364.5 0.606186L181.5 58.6062Z" stroke="black"/>
+<svg width="600" height="505" viewBox="0 0 600 505" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="600" height="505" fill="white"/>
+    <path d="M226 438H91V38H508V438H373" stroke="black"/>
+    <path d="M226 38H91V118H226" stroke="black"/>
+    <path d="M226 118H91V198H226" stroke="black"/>
+    <path d="M373 118H508V198H373" stroke="black"/>
+    <path d="M226 198H91V278H226" stroke="black"/>
+    <path d="M226 278H91V358H226" stroke="black"/>
+    <path d="M373 278H508V358H373" stroke="black"/>
+    <path d="M226 358H91V438H226" stroke="black"/>
+    <path d="M373 358H508V438H373" stroke="black"/>
+    <line x1="300.5" y1="59" x2="300.5" y2="467" stroke="black" stroke-dasharray="30 30"/>
 </svg>

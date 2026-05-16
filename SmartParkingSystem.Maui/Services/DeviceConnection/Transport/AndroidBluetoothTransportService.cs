@@ -14,8 +14,8 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
                                                          ?? throw new InvalidOperationException(
                                                              "The Bluetooth SPP UUID could not be created.");
 
-    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan OpenWarmupDelay = TimeSpan.FromMilliseconds(300);
+    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan OpenWarmupDelay = TimeSpan.FromMilliseconds(900);
 
     private readonly object _lineSync = new();
     private readonly Queue<string> _completedLines = new();
@@ -108,7 +108,7 @@ public sealed class AndroidBluetoothTransportService : IDeviceTransportService
         {
             try
             {
-                await _readerTask.WaitAsync(TimeSpan.FromMilliseconds(500), cancellationToken);
+                await _readerTask.WaitAsync(TimeSpan.FromMilliseconds(1000), cancellationToken);
             }
             catch
             {

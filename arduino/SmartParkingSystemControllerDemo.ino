@@ -1,4 +1,5 @@
 #include <Adafruit_NeoPixel.h>
+#include <SoftwareSerial.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,18 +41,17 @@
 // - редагувати списки RFID-карток
 //
 // Зауваження по фізичному залізу:
-// - Логічних слотів у системі 6.
+// - Логічних слотів у системі 10.
 // - Фізично датчики зараз підключені тільки для перших 3 слотів.
-// - Для слотів 4-6 прошивка зараз тримає "логічне" місце без датчика.
+// - Для слотів 4-10 прошивка зараз тримає "логічне" місце без датчика.
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
 // Bluetooth
 // -----------------------------------------------------------------------------
-// Demo-контролер на Arduino Mega працює через апаратний Serial1:
-// HC-05/HC-06 TXD -> Mega D19 RX1
-// HC-05/HC-06 RXD -> Mega D18 TX1 через дільник напруги
-#define btSerial Serial1
+// HC-05/HC-06 TXD -> Arduino D2 RX
+// HC-05/HC-06 RXD -> Arduino D3 TX через дільник напруги
+SoftwareSerial btSerial(2, 3);
 
 // -----------------------------------------------------------------------------
 // RFID
@@ -79,7 +79,7 @@ Servo gateServo;
 // Базові системні константи
 // -----------------------------------------------------------------------------
 constexpr uint8_t SERVO_PIN = 5;
-constexpr uint8_t SLOT_COUNT = 6;
+constexpr uint8_t SLOT_COUNT = 10;
 constexpr uint8_t MAX_ALLOWED_CARD_COUNT = 20;
 constexpr uint8_t MAX_BLOCKED_CARD_COUNT = 20;
 constexpr uint8_t UID_LENGTH = 4;
@@ -87,10 +87,10 @@ constexpr uint8_t DISPLAY_TEXT_LENGTH = 16;
 constexpr uint8_t NO_PIN = 255;
 constexpr long BT_BAUD_RATE = 9600;
 constexpr uint16_t CONFIG_SIGNATURE = 0x5350;
-constexpr uint8_t CONFIG_VERSION = 7;
+constexpr uint8_t CONFIG_VERSION = 8;
 constexpr unsigned long LCD_MESSAGE_DURATION_MS = 3000UL;
 constexpr size_t RX_BUFFER_SIZE = 80;
-constexpr uint8_t DEFAULT_SLOT_ENABLED_MASK = 0x07;
+constexpr uint16_t DEFAULT_SLOT_ENABLED_MASK = 0x0007;
 constexpr char PROTOCOL_FRAME_MARKER[] = "|||";
 constexpr uint8_t PROTOCOL_FRAME_MARKER_LENGTH = 3;
 constexpr bool DEMO_MODE = true;
@@ -114,10 +114,10 @@ constexpr uint8_t DISABLED_ROUTE_LED_COUNT = 7;
 // Піни паркомісць
 // -----------------------------------------------------------------------------
 // Для слотів 1-3 реально задані ультразвукові датчики.
-// Для слотів 4-6 стоїть NO_PIN, тобто датчик відсутній.
-// Це дозволяє вже зараз тримати 6 логічних місць у протоколі застосунку.
-const uint8_t trigPins[SLOT_COUNT] = {7, 4, A0, NO_PIN, NO_PIN, NO_PIN};
-const uint8_t echoPins[SLOT_COUNT] = {8, 6, A1, NO_PIN, NO_PIN, NO_PIN};
+// Для слотів 4-10 стоїть NO_PIN, тобто датчик відсутній.
+// Це дозволяє вже зараз тримати 10 логічних місць у протоколі застосунку.
+const uint8_t trigPins[SLOT_COUNT] = {7, 4, A0, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN};
+const uint8_t echoPins[SLOT_COUNT] = {8, 6, A1, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN};
 constexpr uint8_t GATE_PASSAGE_TRIG_PIN = A2;
 constexpr uint8_t GATE_PASSAGE_ECHO_PIN = A3;
 constexpr uint8_t FRONT_ACCESS_TRIG_PIN = 25;
@@ -173,7 +173,7 @@ struct PersistedConfig
     uint16_t gatePassageThresholdCm;
 
     // Які слоти взагалі увімкнені в системі.
-    uint8_t slotEnabledMask;
+    uint16_t slotEnabledMask;
 
     // Налаштування тексту на моніторі.
     uint8_t displayForceEnabled;
@@ -1081,11 +1081,15 @@ void sendHello()
     beginProtocolFrame();
     if (DEMO_MODE)
     {
-        btSerial.print(F("HELLO_OK|device=SMART_PARKING|fw=2|slots=6|transport=HC06"));
+        btSerial.print(F("HELLO_OK|device=SMART_PARKING|fw=2|slots="));
+        btSerial.print(SLOT_COUNT);
+        btSerial.print(F("|transport=HC06"));
     }
     else
     {
-        btSerial.print(F("HELLO_OK|device=SMART_PARKING|fw=2|slots=6|transport=HC05"));
+        btSerial.print(F("HELLO_OK|device=SMART_PARKING|fw=2|slots="));
+        btSerial.print(SLOT_COUNT);
+        btSerial.print(F("|transport=HC05"));
     }
     endProtocolFrame();
 }
@@ -1099,11 +1103,15 @@ void sendProfile()
     beginProtocolFrame();
     if (DEMO_MODE)
     {
-        btSerial.print(F("PROFILE|board=ArduinoMega|rfid=DEMO|lcd=I2C_16X2|gate=DEMO|transport=HC06|slots=6|route_led_strips=1|route_leds=15|front_sensor=1"));
+        btSerial.print(F("PROFILE|board=ArduinoMega|rfid=DEMO|lcd=I2C_16X2|gate=DEMO|transport=HC06|slots="));
+        btSerial.print(SLOT_COUNT);
+        btSerial.print(F("|route_led_strips=1|route_leds=15|front_sensor=1"));
     }
     else
     {
-        btSerial.print(F("PROFILE|board=ArduinoMega|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05|slots=6|route_led_strips=1|route_leds=15|front_sensor=1"));
+        btSerial.print(F("PROFILE|board=ArduinoMega|rfid=MFRC522|lcd=I2C_16X2|gate=SERVO|transport=HC05|slots="));
+        btSerial.print(SLOT_COUNT);
+        btSerial.print(F("|route_led_strips=1|route_leds=15|front_sensor=1"));
     }
     endProtocolFrame();
 }
@@ -1294,6 +1302,7 @@ void endProtocolFrame()
 {
     btSerial.print(PROTOCOL_FRAME_MARKER);
     btSerial.print('\n');
+    delay(15);
 }
 
 bool unwrapProtocolFrame(char *line)
@@ -2404,7 +2413,9 @@ void trimLine(char *line)
 bool isSlotEnabled(uint8_t slotIndex)
 {
     return slotIndex < SLOT_COUNT
-        && (config.slotEnabledMask & (1 << slotIndex)) != 0;
+        && trigPins[slotIndex] != NO_PIN
+        && echoPins[slotIndex] != NO_PIN
+        && (config.slotEnabledMask & (static_cast<uint16_t>(1) << slotIndex)) != 0;
 }
 
 void setSlotEnabled(uint8_t slotIndex, bool isEnabled)
@@ -2416,10 +2427,10 @@ void setSlotEnabled(uint8_t slotIndex, bool isEnabled)
 
     if (isEnabled)
     {
-        config.slotEnabledMask |= (1 << slotIndex);
+        config.slotEnabledMask |= (static_cast<uint16_t>(1) << slotIndex);
     }
     else
     {
-        config.slotEnabledMask &= static_cast<uint8_t>(~(1 << slotIndex));
+        config.slotEnabledMask &= static_cast<uint16_t>(~(static_cast<uint16_t>(1) << slotIndex));
     }
 }

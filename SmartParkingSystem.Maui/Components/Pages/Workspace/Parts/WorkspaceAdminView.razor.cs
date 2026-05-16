@@ -204,7 +204,20 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
 
     protected string GetParkingSpotLabel(int slotNumber)
     {
-        return slotNumber switch
+        // TODO: ВИДАЛИТИ — тимчасова візуальна підміна лейблів P2<->P5 і P3<->P8.
+        // Свопить тільки відображувану назву; slotNumber і вся внутрішня логіка залишаються рідними.
+        // Зняти разом з аналогічним свопом у ParkingService.GetSlotsAsync, як тільки фізично
+        // перевісимо мітки на парковці.
+        var displaySlotNumber = slotNumber switch
+        {
+            2 => 5,
+            5 => 2,
+            3 => 8,
+            8 => 3,
+            _ => slotNumber
+        };
+
+        return displaySlotNumber switch
         {
             1 => Texts.ParkingSpot1Label,
             2 => Texts.ParkingSpot2Label,
@@ -212,8 +225,12 @@ public class WorkspaceAdminViewBase : ComponentBase, IDisposable
             4 => Texts.ParkingSpot4Label,
             5 => Texts.ParkingSpot5Label,
             6 => Texts.ParkingSpot6Label,
-            _ when RequireLocalizationService().CurrentLanguage == AppLanguage.Ukrainian => $"Місце P{slotNumber}",
-            _ => $"Parking spot {slotNumber}"
+            7 => Texts.ParkingSpot7Label,
+            8 => Texts.ParkingSpot8Label,
+            9 => Texts.ParkingSpot9Label,
+            10 => Texts.ParkingSpot10Label,
+            _ when RequireLocalizationService().CurrentLanguage == AppLanguage.Ukrainian => $"Місце P{displaySlotNumber}",
+            _ => $"Parking spot {displaySlotNumber}"
         };
     }
 

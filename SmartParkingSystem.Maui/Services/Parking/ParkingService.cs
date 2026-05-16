@@ -155,9 +155,21 @@ public sealed class ParkingService(
                 ? TimeSpan.FromMilliseconds(slot.OccupiedMs)
                 : null;
 
+            // TODO: ВИДАЛИТИ — тимчасова візуальна підміна лейблів P2<->P5 і P3<->P8.
+            // Свопить тільки відображувану назву, slotNumber і id ("P{slotNumber}") лишаються рідними,
+            // щоб не зламати комунікацію з контролером. Зняти, як тільки фізично перевісимо мітки.
+            var displayLabel = slotNumber switch
+            {
+                2 => "P5",
+                5 => "P2",
+                3 => "P8",
+                8 => "P3",
+                _ => $"P{slotNumber}"
+            };
+
             slots[index] = new ParkingSlotSnapshot(
                 $"P{slotNumber}",
-                $"P{slotNumber}",
+                displayLabel,
                 state,
                 occupiedDuration,
                 settingsPreferencesService.GetParkingSlotFloor($"P{slotNumber}"));
