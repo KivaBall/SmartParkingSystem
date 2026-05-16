@@ -10,7 +10,7 @@ public sealed class DeviceConnectionService(
     IDeviceTransportService transportService,
     IDeviceSessionService sessionService) : IDeviceConnectionService
 {
-    private static readonly TimeSpan ConnectionAttemptTimeout = TimeSpan.FromSeconds(45);
+    private static readonly TimeSpan ConnectionAttemptTimeout = TimeSpan.FromSeconds(90);
 
     public async Task<IReadOnlyList<ConnectionTarget>> GetTargetsAsync()
     {
@@ -63,7 +63,8 @@ public sealed class DeviceConnectionService(
     private static IReadOnlyList<ConnectionTarget> RankTargets(IReadOnlyList<ConnectionTarget> targets)
     {
         return targets
-            .OrderBy(target => target.Label, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(IsLikelyControllerTarget)
+            .ThenBy(target => target.Label, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
@@ -82,6 +83,9 @@ public sealed class DeviceConnectionService(
         return value.Contains("HC-05", StringComparison.OrdinalIgnoreCase)
                || value.Contains("HC-06", StringComparison.OrdinalIgnoreCase)
                || value.Contains("Arduino", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("CH340", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("USB-SERIAL", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("USB Serial", StringComparison.OrdinalIgnoreCase)
                || value.Contains("SPS", StringComparison.OrdinalIgnoreCase)
                || value.Contains("SmartParking", StringComparison.OrdinalIgnoreCase);
     }

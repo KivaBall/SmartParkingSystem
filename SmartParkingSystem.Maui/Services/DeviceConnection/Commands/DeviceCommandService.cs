@@ -8,7 +8,7 @@ public sealed class DeviceCommandService(
     IDeviceTransportService transportService,
     IDeviceProtocolExecutionService protocolExecutionService) : IDeviceCommandService
 {
-    private static readonly TimeSpan CommandDrainWindow = TimeSpan.FromMilliseconds(120);
+    private static readonly TimeSpan CommandDrainWindow = TimeSpan.FromMilliseconds(300);
 
     public Task<DeviceCommandResult> SetForceOpenAsync(bool isEnabled, CancellationToken cancellationToken = default)
     {
@@ -367,10 +367,10 @@ public sealed class DeviceCommandService(
                 await transportService.DrainAsync(CommandDrainWindow, token);
                 await transportService.SendLineAsync(command, token);
 
-                var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(2);
+                var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(4);
                 while (DateTimeOffset.UtcNow < timeoutAt)
                 {
-                    var line = await transportService.ReadLineAsync(TimeSpan.FromMilliseconds(250), token);
+                    var line = await transportService.ReadLineAsync(TimeSpan.FromMilliseconds(500), token);
                     if (string.IsNullOrWhiteSpace(line))
                     {
                         continue;

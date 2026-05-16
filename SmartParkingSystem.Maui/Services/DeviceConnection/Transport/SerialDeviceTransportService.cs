@@ -25,10 +25,13 @@ public sealed class SerialDeviceTransportService : IDeviceTransportService
     public Task<IReadOnlyList<ConnectionTarget>> DiscoverTargetsAsync(CancellationToken cancellationToken = default)
     {
 #if WINDOWS
+        var friendlyNames = GetFriendlyPortNames();
         var targets = System.IO.Ports.SerialPort
             .GetPortNames()
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .Select(name => new ConnectionTarget(name, name))
+            .Select(name => new ConnectionTarget(
+                name,
+                friendlyNames.GetValueOrDefault(name, name)))
             .ToArray();
         return Task.FromResult<IReadOnlyList<ConnectionTarget>>(targets);
 #else
@@ -152,4 +155,53 @@ public sealed class SerialDeviceTransportService : IDeviceTransportService
             }
         }
     }
+
+#if WINDOWS
+    private static IReadOnlyDictionary<string, string> GetFriendlyPortNames()
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        TryReadFriendlyPortNames(
+            Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum"),
+            result);
+
+        return result;
+    }
+
+    private static void TryReadFriendlyPortNames(
+        Microsoft.Win32.RegistryKey? root,
+        IDictionary<string, string> result)
+    {
+        if (root is null)
+        {
+            return;
+        }
+
+        using (root)
+        {
+            try
+            {
+                using var deviceParameters = root.OpenSubKey("Device Parameters");
+                var portName = deviceParameters?.GetValue("PortName")?.ToString();
+                var friendlyName = root.GetValue("FriendlyName")?.ToString()
+                                   ?? root.GetValue("DeviceDesc")?.ToString();
+
+                if (!string.IsNullOrWhiteSpace(portName) && !string.IsNullOrWhiteSpace(friendlyName))
+                {
+                    result[portName] = friendlyName.Contains(portName, StringComparison.OrdinalIgnoreCase)
+                        ? friendlyName
+                        : $"{friendlyName} ({portName})";
+                }
+
+                foreach (var childName in root.GetSubKeyNames())
+                {
+                    TryReadFriendlyPortNames(root.OpenSubKey(childName), result);
+                }
+            }
+            catch
+            {
+            }
+        }
+    }
+#endif
 }

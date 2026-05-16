@@ -9,9 +9,9 @@ public sealed class DeviceTelemetryService(
     IDeviceTransportService transportService,
     IDeviceProtocolExecutionService protocolExecutionService) : IDeviceTelemetryService
 {
-    private const int ProtocolWindowMs = 2500;
-    private static readonly TimeSpan ProtocolDrainWindow = TimeSpan.FromMilliseconds(120);
-    private static readonly TimeSpan ProtocolReadTimeout = TimeSpan.FromMilliseconds(300);
+    private const int ProtocolWindowMs = 5000;
+    private static readonly TimeSpan ProtocolDrainWindow = TimeSpan.FromMilliseconds(300);
+    private static readonly TimeSpan ProtocolReadTimeout = TimeSpan.FromMilliseconds(600);
 
     public async Task<DeviceControllerProfile?> GetProfileAsync(CancellationToken cancellationToken = default)
     {
