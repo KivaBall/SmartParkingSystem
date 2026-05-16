@@ -60,7 +60,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IAdminService, AdminService>();
         builder.Services.AddSingleton<IGateService, GateService>();
         builder.Services.AddSingleton<IParkingService, ParkingService>();
-        builder.Services.AddSingleton<SmartParkingRouteService>();
+        builder.Services.AddSingleton<ISmartParkingRouteService, SmartParkingRouteService>();
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
         builder.Services.AddSingleton<ISettingsPreferencesService, SettingsPreferencesService>();
         builder.Services.AddSingleton<BackendSyncOptions>();
@@ -78,7 +78,7 @@ public static class MauiProgram
 
         _ = app.Services.GetRequiredService<IEventsService>();
         _ = app.Services.GetRequiredService<BackendSyncService>();
-        _ = app.Services.GetRequiredService<SmartParkingRouteService>();
+        _ = app.Services.GetRequiredService<ISmartParkingRouteService>();
 
         return app;
     }

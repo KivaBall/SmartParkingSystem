@@ -51,6 +51,9 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
     [Inject]
     protected IJSRuntime? JsRuntime { get; set; }
 
+    [Inject]
+    protected ISmartParkingRouteService? SmartParkingRouteService { get; set; }
+
     [Parameter]
     public bool IsExiting { get; set; }
 
@@ -67,6 +70,7 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
     private bool FloorModeEnabled { get; set; }
     private int FloorModeTitleClicks { get; set; }
     private DateTimeOffset FirstFloorModeTitleClickAt { get; set; }
+    protected bool IsFullscreen { get; private set; }
 
     protected ParkingTexts Texts => RequireLocalizationService().GetParkingTexts();
     protected bool EditParkingEnabled => RequireSettingsPreferencesService().EditParkingEnabled;
@@ -146,6 +150,53 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
         ParkingSlotState.Disabled => "bg-red-400 text-white",
         _ => "bg-white/85 text-calm-900"
     };
+
+    protected int FreeSlotCount => Slots.Count(slot => slot.State == ParkingSlotState.Free);
+    protected int OccupiedSlotCount => Slots.Count(slot => slot.State == ParkingSlotState.Occupied);
+
+    protected SlotOccupant? GetOccupantForSlot(ParkingSlotSnapshot? slot)
+    {
+        if (slot is null || slot.State != ParkingSlotState.Occupied)
+        {
+            return null;
+        }
+
+        return TryParseSlotNumber(slot.Id, out var slotNumber)
+            ? RequireSmartParkingRouteService().GetSlotOccupant(slotNumber)
+            : null;
+    }
+
+    protected string GetSlotRfidLabel(ParkingSlotSnapshot? slot)
+    {
+        var occupant = GetOccupantForSlot(slot);
+        return string.IsNullOrWhiteSpace(occupant?.CardUid)
+            ? Texts.UndefinedValueLabel
+            : occupant!.CardUid;
+    }
+
+    protected string GetSlotVehicleNumberLabel(ParkingSlotSnapshot? slot)
+    {
+        var number = GetOccupantForSlot(slot)?.VehicleNumber;
+        return string.IsNullOrWhiteSpace(number) ? Texts.UndefinedValueLabel : number!;
+    }
+
+    protected string GetSlotVehicleDescriptionLabel(ParkingSlotSnapshot? slot)
+    {
+        var description = GetOccupantForSlot(slot)?.VehicleDescription;
+        return string.IsNullOrWhiteSpace(description) ? Texts.UndefinedValueLabel : description!;
+    }
+
+    protected string? GetSlotEntrySnapshotSource(ParkingSlotSnapshot? slot)
+    {
+        return GetOccupantForSlot(slot)?.EntrySnapshotImageSource;
+    }
+
+    protected Task ToggleFullscreen()
+    {
+        IsFullscreen = !IsFullscreen;
+        NeedsIconRefresh = true;
+        return InvokeAsync(StateHasChanged);
+    }
 
     public void Dispose()
     {
@@ -392,6 +443,9 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
             LastParkingStateFingerprint = BuildParkingStateFingerprint(RequireDeviceSessionService().CurrentSession);
             IsLoading = false;
             SyncDrafts();
+            // Marker icons depend on slot.State (square-parking vs square-parking-off);
+            // Lucide replaces <i> elements only when initializeLucideIcons runs.
+            NeedsIconRefresh = true;
 
             if (Slots.All(slot => slot.Id != SelectedSlotId))
             {
@@ -616,6 +670,12 @@ public class WorkspaceParkingViewBase : ComponentBase, IDisposable
     {
         return SettingsPreferencesService ??
                throw new InvalidOperationException("Settings preferences service is not available.");
+    }
+
+    private ISmartParkingRouteService RequireSmartParkingRouteService()
+    {
+        return SmartParkingRouteService ??
+               throw new InvalidOperationException("Smart parking route service is not available.");
     }
 
     private void OnSessionChanged(DeviceControllerSession? session)
