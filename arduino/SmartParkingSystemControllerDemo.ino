@@ -87,7 +87,7 @@ constexpr uint8_t DISPLAY_TEXT_LENGTH = 16;
 constexpr uint8_t NO_PIN = 255;
 constexpr long BT_BAUD_RATE = 9600;
 constexpr uint16_t CONFIG_SIGNATURE = 0x5350;
-constexpr uint8_t CONFIG_VERSION = 8;
+constexpr uint8_t CONFIG_VERSION = 9;
 constexpr unsigned long LCD_MESSAGE_DURATION_MS = 3000UL;
 constexpr size_t RX_BUFFER_SIZE = 80;
 constexpr uint16_t DEFAULT_SLOT_ENABLED_MASK = 0x0007;
@@ -371,6 +371,7 @@ void setup()
     updateFrontAccessSensorState();
     updateGatePassageState();
     updateGateMode();
+    applyGateOutput();
     updateParkingStates();
     updateDisplayState();
     showMessage("Smart Parking", "Controller Ready");
@@ -422,7 +423,7 @@ void setDefaultConfig()
     config.version = CONFIG_VERSION;
 
     config.servoOpenAngle = 90;
-    config.servoClosedAngle = 0;
+    config.servoClosedAngle = 180;
     config.servoOpenDurationMs = 8000;
     config.occupiedThresholdCm = 10;
     config.telemetryIntervalMs = 500;

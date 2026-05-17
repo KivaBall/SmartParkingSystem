@@ -52,7 +52,7 @@ constexpr uint8_t DISPLAY_TEXT_LENGTH = 16;
 constexpr uint8_t NO_PIN = 255;
 constexpr long COMM_BAUD_RATE = 9600;
 constexpr uint16_t CONFIG_SIGNATURE = 0x5350;
-constexpr uint8_t CONFIG_VERSION = 7;
+constexpr uint8_t CONFIG_VERSION = 8;
 constexpr unsigned long LCD_MESSAGE_DURATION_MS = 3000UL;
 constexpr uint16_t EEPROM_ADDRESS = 0;
 constexpr size_t RX_BUFFER_SIZE = 80;
@@ -285,6 +285,7 @@ void setup()
     updateFrontAccessSensorState();
     updateGatePassageState();
     updateGateMode();
+    applyGateOutput();
     updateParkingStates();
     updateDisplayState();
 
@@ -360,7 +361,7 @@ void setDefaultConfig()
     config.version = CONFIG_VERSION;
 
     config.servoOpenAngle = 90;
-    config.servoClosedAngle = 0;
+    config.servoClosedAngle = 180;
     config.servoOpenDurationMs = 8000;
     config.occupiedThresholdCm = 10;
     config.telemetryIntervalMs = 500;
